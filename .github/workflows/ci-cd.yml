@@ -49,6 +49,10 @@ jobs:
     if: failure()
 
     steps:
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
       - name: Send email notification
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
