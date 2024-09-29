@@ -73,9 +73,28 @@ jobs:
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
 
       - name: Configurar ChromeDriver
-        uses: rosenfeldt/setup-chromedriver@v1
-        with:
-          chrome-version: 'latest' # Puedes especificar una versión específica si lo deseas
+        run: |
+          # Definir la versión de ChromeDriver que deseas instalar
+          CHROME_DRIVER_VERSION=131.0.6738.0
+
+          # Definir la URL de descarga basada en la versión
+          CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
+
+          echo "Descargando ChromeDriver versión ${CHROME_DRIVER_VERSION} desde ${CHROME_DRIVER_URL}..."
+          wget -q ${CHROME_DRIVER_URL} -O chromedriver-linux64.zip
+
+          echo "Descomprimiendo ChromeDriver..."
+          unzip -o chromedriver-linux64.zip
+
+          echo "Moviendo ChromeDriver a /usr/local/bin..."
+          sudo mv chromedriver /usr/local/bin/
+
+          echo "Asignando permisos de ejecución a ChromeDriver..."
+          sudo chmod +x /usr/local/bin/chromedriver
+
+          # Verificar la instalación
+          echo "Verificando la versión instalada de ChromeDriver..."
+          chromedriver --version
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
@@ -87,6 +106,7 @@ jobs:
           echo "Esperando a que el servidor esté listo..."
           npx wait-on http://localhost:3000/products
 
+          # Ejecutar todas las pruebas
           npm run test:all
 
           # Detener el servidor
