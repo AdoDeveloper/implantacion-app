@@ -40,7 +40,7 @@ jobs:
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
-          curl -X POST "https://api.render.com/v1/services/{SERVICE_ID}/deploys" \
+          curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notify:
