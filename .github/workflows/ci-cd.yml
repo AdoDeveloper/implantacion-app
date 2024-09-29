@@ -61,7 +61,7 @@ jobs:
       - name: Install JMeter
         run: |
           wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.6.3.tgz
-          tar -xzf apache-jmeter-5.6.3tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
