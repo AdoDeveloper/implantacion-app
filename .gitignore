@@ -9,3 +9,4 @@ testResults.jtl
 /cypress/screenshots
 /cypress/reports
 /testResults.jtl
+error_screenshot.png
