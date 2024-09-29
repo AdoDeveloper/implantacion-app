@@ -1,7 +1,5 @@
 // send-email-success.js
 const nodemailer = require('nodemailer');
-const fs = require('fs');
-const path = require('path');
 
 // Configurar el transportador de Nodemailer
 const transporter = nodemailer.createTransport({
@@ -11,15 +9,6 @@ const transporter = nodemailer.createTransport({
     pass: process.env.GMAIL_PASS,
   },
 });
-
-// Leer los informes de las pruebas
-const cypressReportPath = path.join(__dirname, 'cypress', 'reports', 'mochawesome.json');
-let cypressReport = '';
-try {
-  cypressReport = fs.readFileSync(cypressReportPath, 'utf8');
-} catch (err) {
-  console.error('No se pudo leer el informe de Cypress:', err);
-}
 
 // Opciones del correo electrónico
 const mailOptions = {
