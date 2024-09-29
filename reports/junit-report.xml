@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuites name="jest tests" tests="3" failures="0" errors="0" time="4.731">
-  <testsuite name="Integración de Productos" errors="0" failures="0" skipped="0" timestamp="2024-09-29T09:01:47" time="4.634" tests="3">
-    <testcase classname="Integración de Productos Debe obtener todos los productos" name="Integración de Productos Debe obtener todos los productos" time="1.449">
+<testsuites name="jest tests" tests="3" failures="0" errors="0" time="7.306">
+  <testsuite name="Integración de Productos" errors="0" failures="0" skipped="0" timestamp="2024-09-29T09:23:02" time="7.192" tests="3">
+    <testcase classname="Integración de Productos Debe obtener todos los productos" name="Integración de Productos Debe obtener todos los productos" time="1.017">
     </testcase>
-    <testcase classname="Integración de Productos Debe crear un nuevo producto" name="Integración de Productos Debe crear un nuevo producto" time="1.182">
+    <testcase classname="Integración de Productos Debe crear un nuevo producto" name="Integración de Productos Debe crear un nuevo producto" time="1.349">
     </testcase>
-    <testcase classname="Integración de Productos Debe eliminar un producto" name="Integración de Productos Debe eliminar un producto" time="0.978">
+    <testcase classname="Integración de Productos Debe eliminar un producto" name="Integración de Productos Debe eliminar un producto" time="0.972">
     </testcase>
   </testsuite>
 </testsuites>

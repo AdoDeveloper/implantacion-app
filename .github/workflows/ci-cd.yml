@@ -60,18 +60,22 @@ jobs:
 
       - name: Instalar JMeter
         run: |
-          wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.6.3.tgz
+          wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
           tar -xzf apache-jmeter-5.6.3.tgz
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
-      - name: Ejecutar pruebas de extremo a extremo
+      - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
+        run: npm run test:all
+
+      - name: Ejecutar pruebas de extremo a extremo (E2E) con Cypress
         run: npm run test:e2e
 
       - name: Mostrar resultados de Cypress
         run: |
           echo "Mostrando resultados de pruebas de Cypress:"
-          cat cypress/reports/*.json || echo "No se encontraron archivos JSON de informe de Cypress."
+          cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
+          cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
 
       - name: Subir artefactos de videos de Cypress
         if: always()
@@ -87,11 +91,18 @@ jobs:
           name: capturas-cypress
           path: cypress/screenshots
 
-      - name: Ejecutar pruebas de rendimiento con JMeter
+      - name: Subir informes de Cypress
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: informes-cypress
+          path: cypress/reports
+
+      - name: Mostrar resultados de JMeter
         run: |
-          jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report
-          echo "Pruebas de JMeter completadas. Resumen de resultados:"
+          echo "Mostrando resultados de pruebas de JMeter:"
           cat testResults.jtl || echo "No se generó testResults.jtl."
+          echo "El informe HTML de JMeter está disponible como artefacto."
 
       - name: Subir informe de JMeter
         if: always()

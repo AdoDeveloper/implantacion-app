@@ -9,7 +9,7 @@
     "test:unit": "jest --config jest.config.js --testPathPattern=src/tests/unit --passWithNoTests",
     "test:integration": "jest --config jest.config.js --testPathPattern=src/tests/integration --passWithNoTests",
     "test:ui": "cypress run --reporter mochawesome --reporter-options reportDir=cypress/reports,overwrite=false,html=true,json=true",
-    "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl",
+    "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
     "test:e2e": "start-server-and-test start http://localhost:3000/products test:ui",
     "generate-prisma": "prisma generate",
