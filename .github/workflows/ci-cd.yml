@@ -77,12 +77,18 @@ jobs:
           cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
           cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
 
+      - name: Verificar informes de Cypress
+        run: |
+          echo "Verificando contenido de cypress/reports:"
+          ls -la cypress/reports
+
       - name: Subir artefactos de videos de Cypress
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: videos-cypress
           path: cypress/videos
+          if-no-files-found: warn
 
       - name: Subir capturas de pantalla de Cypress
         if: always()
@@ -90,6 +96,7 @@ jobs:
         with:
           name: capturas-cypress
           path: cypress/screenshots
+          if-no-files-found: warn
 
       - name: Subir informes de Cypress
         if: always()
@@ -97,6 +104,7 @@ jobs:
         with:
           name: informes-cypress
           path: cypress/reports
+          if-no-files-found: warn
 
       - name: Mostrar resultados de JMeter
         run: |
@@ -104,12 +112,18 @@ jobs:
           cat testResults.jtl || echo "No se generó testResults.jtl."
           echo "El informe HTML de JMeter está disponible como artefacto."
 
+      - name: Verificar informes de JMeter
+        run: |
+          echo "Verificando contenido de report:"
+          ls -la report
+
       - name: Subir informe de JMeter
         if: always()
         uses: actions/upload-artifact@v3
         with:
           name: informe-jmeter
           path: report
+          if-no-files-found: warn
 
   desplegar:
     needs: construir-y-probar
