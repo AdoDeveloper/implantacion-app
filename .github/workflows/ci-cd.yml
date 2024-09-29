@@ -58,8 +58,11 @@ jobs:
       - name: Run Lint
         run: npm run lint
 
-      - name: Run End-to-End Tests
+      - name: Run Integration UI Test
         run: npm run test:e2e
+
+      - name: Run End-to-End Tests
+        run: npm run test:all
 
   deploy:
     needs: build-and-test

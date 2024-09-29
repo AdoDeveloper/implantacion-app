@@ -10,7 +10,7 @@
     "test:integration": "jest --config jest.config.js --testPathPattern=src/tests/integration --passWithNoTests",
     "test:ui": "cypress run",
     "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl",
-    "test:all": "npm run test:unit && npm run test:integration && npm run test:ui && npm run test:performance",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
     "test:e2e": "start-server-and-test start http://localhost:3000/products test:ui",
     "generate-prisma": "prisma generate",
     "migrate": "prisma migrate dev --name init",
