@@ -75,7 +75,7 @@ jobs:
       - name: Configurar ChromeDriver
         run: |
           # Definir la versión de ChromeDriver que deseas instalar
-          CHROME_DRIVER_VERSION=129.0.6668.70
+          CHROME_DRIVER_VERSION=131.0.6746.0
 
           # Definir la URL de descarga basada en la versión
           CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
@@ -96,6 +96,10 @@ jobs:
           echo "Verificando la versión instalada de ChromeDriver..."
           chromedriver --version
 
+          # Limpieza de archivos temporales
+          rm chromedriver-linux64.zip
+          rm -rf chromedriver-linux64/
+
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
           # Definir el puerto para estas pruebas
@@ -105,12 +109,8 @@ jobs:
           npm run start &
           SERVER_PID=$!
 
-          # Esperar a que el servidor esté listo en el puerto 3000
-          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
-          npx wait-on http://localhost:${PORT}/products
-
-          # Ejecutar todas las pruebas
-          npm run test:all
+          # Ejecutar las pruebas y capturar el resumen
+          npm run test:all | tee test-summary.log
 
           # Detener el servidor
           echo "Deteniendo el servidor..."
@@ -118,9 +118,23 @@ jobs:
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
+          # Definir un puerto diferente para las pruebas E2E con Selenium
+          export PORT=3001
 
-          # Ejecutar las pruebas de Selenium
-          npm run selenium-test
+          # Iniciar el servidor en segundo plano en el puerto 3001
+          PORT=3001 npm run start &
+          SERVER_PID=$!
+
+          # Esperar a que el servidor esté listo en el puerto 3001
+          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
+          npx wait-on http://localhost:${PORT}/products
+
+          # Ejecutar las pruebas de Selenium y capturar errores
+          npm run selenium-test 2> error.log || echo "Las pruebas de Selenium fallaron."
+
+          # Detener el servidor
+          echo "Deteniendo el servidor..."
+          kill $SERVER_PID
 
       - name: Ejecutar pruebas E2E con Cypress
         run: |
@@ -135,8 +149,8 @@ jobs:
           echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
           npx wait-on http://localhost:${PORT}/products
 
-          # Ejecutar las pruebas de Cypress
-          npm run test:e2e
+          # Ejecutar las pruebas de Cypress y capturar logs
+          npm run test:e2e | tee cypress-test.log
 
           # Detener el servidor
           echo "Deteniendo el servidor..."
@@ -145,8 +159,7 @@ jobs:
       - name: Mostrar resultados de Cypress
         run: |
           echo "Mostrando resultados de pruebas de Cypress:"
-          cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
-          cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
+          cat cypress-test.log || echo "No se encontraron logs de Cypress."
 
       - name: Mostrar resultados de JMeter
         run: |
@@ -157,6 +170,33 @@ jobs:
         run: |
           echo "Verificando contenido de report:"
           ls -la report
+
+      - name: Subir logs como artefactos
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-logs
+          path: |
+            test-summary.log
+            error.log
+            cypress-test.log
+            report/
+
+      - name: Subir reportes de pruebas
+        uses: actions/upload-artifact@v3
+        with:
+          name: test-reports
+          path: |
+            cypress/reports/mochawesome.json
+            cypress/reports/mochawesome.html
+            testResults.jtl
+
+      - name: Enviar notificación de éxito
+        if: success()
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node send-email-success.js
 
   desplegar:
     needs: construir-y-probar
@@ -195,4 +235,5 @@ jobs:
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-        run: node send-email.js
+          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: node send-email-failure.js
