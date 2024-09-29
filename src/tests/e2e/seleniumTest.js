@@ -14,7 +14,7 @@ const chrome = require('selenium-webdriver/chrome');
   let driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
   try {
     // Navegar a la página de productos
-    await driver.get('http://localhost:3000/products');
+    await driver.get('http://localhost:3001/products');
     let title = await driver.getTitle();
     console.log(`Título de la página: ${title}`);
 
