@@ -3,15 +3,24 @@ const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 
 (async function seleniumTest() {
-  // Configurar las opciones de Chrome (opcional)
+  // Configurar las opciones de Chrome
   let options = new chrome.Options();
-  // Descomenta la siguiente línea para ver el navegador durante las pruebas
-  // options.headless(false);
+  options.addArguments('--headless'); // Ejecutar en modo headless
+  options.addArguments('--no-sandbox'); // Bypass OS security model
+  options.addArguments('--disable-dev-shm-usage'); // Overcome limited resource problems
+  options.addArguments('--disable-gpu'); // Deshabilitar GPU
+  options.addArguments('--window-size=1920,1080'); // Definir tamaño de ventana
 
-  let driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
+  // Crear una instancia del WebDriver
+  let driver = await new Builder()
+    .forBrowser('chrome')
+    .setChromeOptions(options)
+    .build();
+
   try {
     // Navegar a la página de productos
-    await driver.get('http://localhost:3001/products');
+    await driver.get('http://localhost:3001/products'); // Asegúrate de que el puerto sea 3001
+
     let title = await driver.getTitle();
     console.log(`Título de la página: ${title}`);
 

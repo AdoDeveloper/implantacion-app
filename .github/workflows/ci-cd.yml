@@ -160,14 +160,32 @@ jobs:
           echo "Deteniendo el servidor..."
           kill $SERVER_PID
 
-      - name: Guardar resultados de pruebas
+      - name: Mostrar resultados de Cypress
+        run: |
+          echo "Mostrando resultados de pruebas de Cypress:"
+          cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
+          cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
+
+      - name: Mostrar resultados de JMeter
+        run: |
+          echo "Mostrando resultados de pruebas de JMeter:"
+          cat testResults.jtl || echo "No se generó testResults.jtl."
+
+      - name: Verificar informes de JMeter
+        run: |
+          echo "Verificando contenido de report:"
+          ls -la report
+
+      - name: Subir logs como artefacto
         uses: actions/upload-artifact@v3
         with:
           name: test-logs
           path: |
-            cypress/reports/
+            cypress/reports/mochawesome.json
+            cypress/reports/mochawesome.html
             testResults.jtl
             report/
+            error_screenshot.png
 
   desplegar:
     needs: construir-y-probar
@@ -185,38 +203,60 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
-  notificar-success:
-    needs: construir-y-probar
-    runs-on: ubuntu-latest
-    if: success()
-
-    steps:
-      - name: Descargar artefactos de pruebas
-        uses: actions/download-artifact@v3
-        with:
-          name: test-logs
-          path: ./logs
-
-      - name: Enviar notificación por correo electrónico (Éxito)
-        env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-        run: node send-email-success.js
-
-  notificar-failure:
+  notificar-fallo:
     needs: construir-y-probar
     runs-on: ubuntu-latest
     if: failure()
 
     steps:
-      - name: Descargar artefactos de pruebas
+      - name: Obtener código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Descargar artefactos de logs
         uses: actions/download-artifact@v3
         with:
           name: test-logs
-          path: ./logs
+          path: logs/
 
-      - name: Enviar notificación por correo electrónico (Fallo)
+      - name: Enviar notificación por correo electrónico de fallo
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
         run: node send-email-failure.js
+
+  notificar-exito:
+    needs: construir-y-probar
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Descargar artefactos de logs
+        uses: actions/download-artifact@v3
+        with:
+          name: test-logs
+          path: logs/
+
+      - name: Enviar notificación por correo electrónico de éxito
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+        run: node send-email-success.js
