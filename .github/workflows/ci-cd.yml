@@ -90,11 +90,13 @@ jobs:
   
       - name: Instalar ChromeDriver
         run: |
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+')
-          wget -N https://chromedriver.storage.googleapis.com/${CHROME_VERSION}/chromedriver_linux64.zip
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
+            CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+            CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
+            DOWNLOAD_URL=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION")
+            wget -N https://chromedriver.storage.googleapis.com/${DOWNLOAD_URL}/chromedriver_linux64.zip
+            unzip chromedriver_linux64.zip
+            sudo mv chromedriver /usr/local/bin/
+            sudo chmod +x /usr/local/bin/chromedriver
   
       - name: Ejecutar pruebas E2E con Cypress
         run: npm run test:e2e
