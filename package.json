@@ -14,7 +14,7 @@
     "generate-prisma": "prisma generate",
     "migrate": "prisma migrate dev --name init",
     "deploy": "npm run generate-prisma && npm start",
-    "lint": "eslint .",
+    "lint": "eslint . --max-warnings=0",
     "format": "prettier --write \"src/**/*.js\"",
     "prepare": "husky install",
     "ci": "npm run lint && npm run test:all && npm run deploy || echo 'Tests failed. Not deploying.'"
@@ -52,7 +52,7 @@
   },
   "eslintConfig": {
     "env": {
-      "es2021": true,
+      "es2024": true,
       "node": true,
       "jest": true,
       "cypress/globals": true,

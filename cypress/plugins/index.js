@@ -1,7 +1,7 @@
 // cypress/plugins/index.js
 /// <reference types="cypress" />
 
-module.exports = (on, config) => {
+module.exports = () => {
     // Puedes configurar plugins aquí si lo necesitas
   }
   

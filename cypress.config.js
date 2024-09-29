@@ -1,7 +1,7 @@
 // cypress.config.js
 module.exports = {
   e2e: {
-    setupNodeEvents(on, config) {
+    setupNodeEvents() {
       // Implementar cualquier evento o plugin si es necesario
     },
     baseUrl: 'http://localhost:3000',
@@ -13,4 +13,4 @@ module.exports = {
   videosFolder: "cypress/videos",
   downloadsFolder: "cypress/downloads",
   fixturesFolder: "cypress/fixtures"
-}
+};

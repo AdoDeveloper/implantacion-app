@@ -15,11 +15,12 @@ describe('deleteProduct', () => {
     const reqCreate = {
       body: { name: 'Producto de prueba', description: 'Descripción', price: 19.99 },
     };
-    const resCreate = {
-      redirect: jest.fn(),
-      status: jest.fn().mockReturnThis(),
-      send: jest.fn(),
-    };
+    
+    // const resCreate = {
+    //   redirect: jest.fn(),
+    //   status: jest.fn().mockReturnThis(),
+    //   send: jest.fn(),
+    // };
 
     await prisma.product.create(reqCreate.body);
     createdProductId = createdProduct.id; // Asigna el ID del producto recién creado
