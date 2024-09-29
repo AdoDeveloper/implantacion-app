@@ -60,8 +60,10 @@ jobs:
 
       - name: Install JMeter
         run: |
-          sudo apt-get update
-          sudo apt-get install -y jmeter
+          wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.5.tgz
+          tar -xzf apache-jmeter-5.5.tgz
+          sudo mv apache-jmeter-5.5 /opt/jmeter
+          sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
       - name: Run End-to-End Tests
         run: npm run test:e2e
