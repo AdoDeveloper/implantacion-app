@@ -118,23 +118,8 @@ jobs:
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
-          # Definir un puerto diferente para las pruebas E2E con Selenium
-          export PORT=3001
-
-          # Iniciar el servidor en segundo plano en el puerto 3001
-          PORT=3001 npm run start &
-          SERVER_PID=$!
-
-          # Esperar a que el servidor esté listo en el puerto 3001
-          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
-          npx wait-on http://localhost:${PORT}/products
-
           # Ejecutar las pruebas de Selenium
           npm run selenium-test
-
-          # Detener el servidor
-          echo "Deteniendo el servidor..."
-          kill $SERVER_PID
 
       - name: Ejecutar pruebas E2E con Cypress
         run: |

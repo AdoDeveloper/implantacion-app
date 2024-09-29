@@ -12,7 +12,7 @@
     "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
     "test:e2e": "start-server-and-test start http://localhost:3000/products test:ui",
-    "test:selenium": "start-server-and-test start http://localhost:3000/products selenium-test",
+    "test:selenium": "npm run selenium-test",
     "selenium-test": "node src/tests/e2e/seleniumTest.js",
     "generate-prisma": "prisma generate",
     "migrate": "prisma migrate dev --name init",
