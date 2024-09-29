@@ -11,7 +11,7 @@
     "test:ui": "cypress run --reporter mochawesome --reporter-options reportDir=cypress/reports,overwrite=false,html=true,json=true",
     "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:performance",
-    "test:e2e": "test:ui",
+    "test:e2e": "npm run test:ui",
     "test:selenium": "npm run selenium-test",
     "selenium-test": "node src/tests/e2e/seleniumTest.js",
     "generate-prisma": "prisma generate",
