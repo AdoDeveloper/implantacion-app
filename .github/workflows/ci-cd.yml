@@ -66,7 +66,20 @@ jobs:
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
-        run: npm run test:all
+        run: |
+          # Iniciar el servidor en segundo plano
+          npm run start &
+          SERVER_PID=$!
+
+          # Esperar a que el servidor esté listo
+          echo "Esperando a que el servidor esté listo..."
+          npx wait-on http://localhost:3000/products
+
+          npm run test:all
+
+           # Detener el servidor
+          echo "Deteniendo el servidor..."
+          kill $SERVER_PID
 
       - name: Ejecutar pruebas de extremo a extremo (E2E) con Cypress
         run: npm run test:e2e
@@ -81,7 +94,6 @@ jobs:
         run: |
           echo "Mostrando resultados de pruebas de JMeter:"
           cat testResults.jtl || echo "No se generó testResults.jtl."
-          echo "El informe HTML de JMeter está disponible como artefacto."
 
       - name: Verificar informes de JMeter
         run: |
