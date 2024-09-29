@@ -87,7 +87,7 @@ jobs:
           unzip -o chromedriver-linux64.zip
 
           echo "Moviendo ChromeDriver a /usr/local/bin..."
-          sudo mv chromedriver /usr/local/bin/
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
 
           echo "Asignando permisos de ejecución a ChromeDriver..."
           sudo chmod +x /usr/local/bin/chromedriver
