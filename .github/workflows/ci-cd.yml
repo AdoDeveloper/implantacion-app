@@ -9,6 +9,26 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpassword
+          MYSQL_DATABASE: testdb
+          MYSQL_USER: user
+          MYSQL_PASSWORD: password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd "mysqladmin ping --silent"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 3
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -16,16 +36,30 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.17.0'
+          node-version: '20.x'
 
       - name: Install dependencies
-        run: npx cross-env npm install  # Usar cross-env para evitar problemas de compatibilidad
+        run: npm install
+
+      - name: Wait for MySQL to be ready
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 --silent; then
+              echo "MySQL is ready"
+              break
+            fi
+            echo "Waiting for MySQL..."
+            sleep 1
+          done
+
+      - name: Run database migrations
+        run: npx prisma migrate deploy
 
       - name: Run Lint
-        run: npx cross-env NODE_ENV=test npm run lint  # Usar cross-env con NODE_ENV
+        run: npm run lint
 
       - name: Run Tests
-        run: npx cross-env NODE_ENV=test npm run test:all  # Usar cross-env para las pruebas
+        run: npm run test:all
 
   deploy:
     needs: build-and-test
@@ -55,13 +89,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20.17.0'
+          node-version: '20.x'
 
       - name: Install dependencies
-        run: npx cross-env npm install  # Usar cross-env para evitar problemas de compatibilidad
+        run: npm install
 
       - name: Send email notification
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-        run: npx cross-env node send-email.js  # Usar cross-env para ejecutar el script con nodemailer
+        run: node send-email.js
