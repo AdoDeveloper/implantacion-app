@@ -42,10 +42,6 @@ const mailOptions = {
       <p>Puedes revisar los detalles de la ejecución en el siguiente enlace:</p>
       <a href="https://github.com/AdoDeveloper/implantacion-app/actions/workflows/ci-cd.yml" style="color: #1e88e5; text-decoration: none; font-weight: bold;">🔗 Ver detalles del pipeline</a>
       <br><br>
-      <h3 style="color: #f44336;">📄 Resumen de Pruebas de Cypress:</h3>
-      <pre>${cypressReport}</pre>
-      <h3 style="color: #f44336;">📄 Resumen de Logs de JMeter:</h3>
-      <pre>${jmeterLog}</pre>
       <p style="color: #f44336; font-weight: bold;">¡Revisar y corregir los errores lo antes posible! ⏰</p>
     </div>
   `,

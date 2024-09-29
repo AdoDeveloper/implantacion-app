@@ -75,7 +75,7 @@ jobs:
       - name: Configurar ChromeDriver
         run: |
           # Definir la versión de ChromeDriver que deseas instalar
-          CHROME_DRIVER_VERSION=131.0.6746.0
+          CHROME_DRIVER_VERSION=129.0.6668.70
 
           # Definir la URL de descarga basada en la versión
           CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
@@ -117,48 +117,18 @@ jobs:
           npm run test:all
 
           # Detener el servidor
-          echo "Deteniendo el servidor..."
-          kill $SERVER_PID
+          # echo "Deteniendo el servidor..."
+          # kill $SERVER_PID
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
-          # Definir un puerto diferente para las pruebas E2E con Selenium
-          export PORT=3001
-
-          # Iniciar el servidor en segundo plano en el puerto 3001
-          PORT=3001 npm run start &
-          SERVER_PID=$!
-
-          # Esperar a que el servidor esté listo en el puerto 3001
-          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
-          npx wait-on http://localhost:${PORT}/products
-
           # Ejecutar las pruebas de Selenium
           npm run selenium-test
 
-          # Detener el servidor
-          echo "Deteniendo el servidor..."
-          kill $SERVER_PID
-
       - name: Ejecutar pruebas E2E con Cypress
         run: |
-          # Definir el puerto para las pruebas E2E con Cypress
-          export PORT=3002
-
-          # Iniciar el servidor en segundo plano en el puerto 3002
-          PORT=3002 npm run start &
-          SERVER_PID=$!
-
-          # Esperar a que el servidor esté listo en el puerto 3002
-          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
-          npx wait-on http://localhost:${PORT}/products
-
           # Ejecutar las pruebas de Cypress
           npm run test:e2e
-
-          # Detener el servidor
-          echo "Deteniendo el servidor..."
-          kill $SERVER_PID
 
       - name: Mostrar resultados de Cypress
         run: |
@@ -175,17 +145,6 @@ jobs:
         run: |
           echo "Verificando contenido de report:"
           ls -la report
-
-      - name: Subir logs como artefacto
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-logs
-          path: |
-            cypress/reports/mochawesome.json
-            cypress/reports/mochawesome.html
-            testResults.jtl
-            report/
-            error_screenshot.png
 
   desplegar:
     needs: construir-y-probar
@@ -220,12 +179,6 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Descargar artefactos de logs
-        uses: actions/download-artifact@v3
-        with:
-          name: test-logs
-          path: logs/
-
       - name: Enviar notificación por correo electrónico de fallo
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
@@ -248,12 +201,6 @@ jobs:
 
       - name: Instalar dependencias
         run: npm ci
-
-      - name: Descargar artefactos de logs
-        uses: actions/download-artifact@v3
-        with:
-          name: test-logs
-          path: logs/
 
       - name: Enviar notificación por correo electrónico de éxito
         env:

@@ -19,7 +19,7 @@ const chrome = require('selenium-webdriver/chrome');
 
   try {
     // Navegar a la página de productos
-    await driver.get('http://localhost:3001/products'); // Asegúrate de que el puerto sea 3001
+    await driver.get('http://localhost:3000/products'); // Asegúrate de que el puerto sea 3001
 
     let title = await driver.getTitle();
     console.log(`Título de la página: ${title}`);
