@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=production node server.js",
+    "start": "cross-env NODE_ENV=production PORT=3000 node server.js",
     "dev": "cross-env NODE_ENV=development nodemon server.js",
     "test": "cross-env NODE_ENV=test jest --verbose",
     "test:unit": "jest --config jest.config.js --testPathPattern=src/tests/unit --passWithNoTests",
@@ -11,6 +11,7 @@
     "test:ui": "cypress run",
     "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:ui && npm run test:performance",
+    "test:e2e": "start-server-and-test start http://localhost:3000 test:ui",
     "generate-prisma": "prisma generate",
     "migrate": "prisma migrate dev --name init",
     "deploy": "npm run generate-prisma && npm start",
@@ -48,7 +49,9 @@
     "nodemon": "^3.1.7",
     "prettier": "^3.0.0",
     "prisma": "^5.20.0",
-    "supertest": "^7.0.0"
+    "start-server-and-test": "^2.0.8",
+    "supertest": "^7.0.0",
+    "wait-on": "^8.0.1"
   },
   "eslintConfig": {
     "env": {

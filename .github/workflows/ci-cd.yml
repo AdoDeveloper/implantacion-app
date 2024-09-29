@@ -39,7 +39,7 @@ jobs:
           node-version: '20.x'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Wait for MySQL to be ready
         run: |
@@ -58,22 +58,8 @@ jobs:
       - name: Run Lint
         run: npm run lint
 
-      - name: Start application server
-        run: |
-          npm start &
-        env:
-          PORT: 3000  # Ensure the server runs on port 3000
-
-      - name: Wait for server to be ready
-        run: npx wait-on http://localhost:3000
-
-      - name: Run Tests
-        run: npm run test:all
-
-      - name: Stop application server
-        if: always()
-        run: |
-          kill $(lsof -t -i:3000) || true
+      - name: Run End-to-End Tests
+        run: npm run test:e2e
 
   deploy:
     needs: build-and-test
@@ -106,7 +92,7 @@ jobs:
           node-version: '20.x'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Send email notification
         env:
