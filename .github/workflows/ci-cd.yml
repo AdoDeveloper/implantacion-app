@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: Pipeline CI/CD
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  construir-y-probar:
     runs-on: ubuntu-latest
 
     services:
@@ -30,81 +30,111 @@ jobs:
       DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
 
     steps:
-      - name: Checkout code
+      - name: Obtener código
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      - name: Install dependencies
+      - name: Instalar dependencias
         run: npm ci
 
-      - name: Wait for MySQL to be ready
+      - name: Esperar a que MySQL esté listo
         run: |
           for i in {1..30}; do
             if mysqladmin ping -h 127.0.0.1 --silent; then
-              echo "MySQL is ready"
+              echo "MySQL está listo"
               break
             fi
-            echo "Waiting for MySQL..."
+            echo "Esperando a MySQL..."
             sleep 1
           done
 
-      - name: Run database migrations
+      - name: Ejecutar migraciones de la base de datos
         run: npx prisma migrate deploy
 
-      - name: Run Lint
+      - name: Ejecutar Lint
         run: npm run lint
 
-      - name: Install JMeter
+      - name: Instalar JMeter
         run: |
           wget https://downloads.apache.org//jmeter/binaries/apache-jmeter-5.6.3.tgz
           tar -xzf apache-jmeter-5.6.3.tgz
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
-      - name: Run End-to-End Tests
+      - name: Ejecutar pruebas de extremo a extremo
         run: npm run test:e2e
 
-      - name: Run All Tests
-        run: npm run test:all
+      - name: Mostrar resultados de Cypress
+        run: |
+          echo "Mostrando resultados de pruebas de Cypress:"
+          cat cypress/reports/mochawesome-report/*.json
+          echo "Los videos y capturas de Cypress serán subidos como artefactos."
 
-  deploy:
-    needs: build-and-test
+      - name: Subir artefactos de videos de Cypress
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: videos-cypress
+          path: cypress/videos
+
+      - name: Subir capturas de pantalla de Cypress
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: capturas-cypress
+          path: cypress/screenshots
+
+      - name: Ejecutar pruebas de rendimiento con JMeter
+        run: |
+          jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report
+          echo "Pruebas de JMeter completadas. Resumen de resultados:"
+          cat testResults.jtl
+
+      - name: Subir informe de JMeter
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: informe-jmeter
+          path: report
+
+  desplegar:
+    needs: construir-y-probar
     runs-on: ubuntu-latest
     if: success()
 
     steps:
-      - name: Checkout code
+      - name: Obtener código
         uses: actions/checkout@v3
 
-      - name: Deploy to Render
+      - name: Desplegar en Render
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
         run: |
           curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
-  notify:
-    needs: build-and-test
+  notificar:
+    needs: construir-y-probar
     runs-on: ubuntu-latest
     if: failure()
 
     steps:
-      - name: Checkout code
+      - name: Obtener código
         uses: actions/checkout@v3
 
-      - name: Set up Node.js
+      - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      - name: Install dependencies
+      - name: Instalar dependencias
         run: npm ci
 
-      - name: Send email notification
+      - name: Enviar notificación por correo electrónico
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
