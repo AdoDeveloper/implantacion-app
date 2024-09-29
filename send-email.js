@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 
 const mailOptions = {
   from: process.env.GMAIL_USER,
-  to: 'ernestogiron503@gmail.com',
+  to: 'ernestogiron503@gmail.com, gabrielarivas232323@gmail.com, kevinmiguelapariciohernandez@gmail.com',
   subject: '🚨 Error en CI/CD Pipeline 🚨',
   html: `
     <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #f44336; border-radius: 10px;">

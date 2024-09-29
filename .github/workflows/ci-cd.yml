@@ -65,6 +65,18 @@ jobs:
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
 
+      - name: Instalar Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Configurar ChromeDriver
+        uses: rosenfeldt/setup-chromedriver@v1
+        with:
+          chrome-version: 'latest' # Puedes especificar una versión específica si lo deseas
+
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
           # Iniciar el servidor en segundo plano
@@ -77,30 +89,13 @@ jobs:
 
           npm run test:all
 
-           # Detener el servidor
+          # Detener el servidor
           echo "Deteniendo el servidor..."
           kill $SERVER_PID
 
-      - name: Instalar Chrome
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt install -y ./google-chrome-stable_current_amd64.deb
-  
-      - name: Instalar ChromeDriver
-        run: |
-            CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+' | head -1)
-            CHROME_MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d. -f1)
-            DOWNLOAD_URL=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_MAJOR_VERSION")
-            wget -N https://chromedriver.storage.googleapis.com/${DOWNLOAD_URL}/chromedriver_linux64.zip
-            unzip chromedriver_linux64.zip
-            sudo mv chromedriver /usr/local/bin/
-            sudo chmod +x /usr/local/bin/chromedriver
-  
       - name: Ejecutar pruebas E2E con Cypress
         run: npm run test:e2e
-  
+
       - name: Ejecutar pruebas E2E con Selenium
         run: npm run test:selenium
 
