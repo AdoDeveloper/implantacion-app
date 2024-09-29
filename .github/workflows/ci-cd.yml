@@ -71,8 +71,7 @@ jobs:
       - name: Mostrar resultados de Cypress
         run: |
           echo "Mostrando resultados de pruebas de Cypress:"
-          cat cypress/reports/mochawesome-report/*.json
-          echo "Los videos y capturas de Cypress serán subidos como artefactos."
+          cat cypress/reports/*.json || echo "No se encontraron archivos JSON de informe de Cypress."
 
       - name: Subir artefactos de videos de Cypress
         if: always()
@@ -92,7 +91,7 @@ jobs:
         run: |
           jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report
           echo "Pruebas de JMeter completadas. Resumen de resultados:"
-          cat testResults.jtl
+          cat testResults.jtl || echo "No se generó testResults.jtl."
 
       - name: Subir informe de JMeter
         if: always()
