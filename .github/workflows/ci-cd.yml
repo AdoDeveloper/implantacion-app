@@ -58,10 +58,15 @@ jobs:
       - name: Run Lint
         run: npm run lint
 
-      - name: Run Integration UI Test
-        run: npm run test:e2e
+      - name: Install JMeter
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jmeter
 
       - name: Run End-to-End Tests
+        run: npm run test:e2e
+
+      - name: Run All Tests
         run: npm run test:all
 
   deploy:
