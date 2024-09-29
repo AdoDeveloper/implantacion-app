@@ -3,13 +3,10 @@ const { Builder, By, until } = require('selenium-webdriver');
 const chrome = require('selenium-webdriver/chrome');
 
 (async function seleniumTest() {
-    // Configurar las opciones de Chrome
-    let options = new chrome.Options();
-    options.addArguments('--headless'); // Ejecutar en modo headless
-    options.addArguments('--no-sandbox'); // Bypass OS security model
-    options.addArguments('--disable-dev-shm-usage'); // Overcome limited resource problems
-    options.addArguments('--disable-gpu'); // Deshabilitar GPU
-    options.addArguments('--window-size=1920,1080'); // Definir tamaño de ventana
+  // Configurar las opciones de Chrome (opcional)
+  let options = new chrome.Options();
+  // Descomenta la siguiente línea para ver el navegador durante las pruebas
+  // options.headless(false);
 
   let driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build();
   try {
