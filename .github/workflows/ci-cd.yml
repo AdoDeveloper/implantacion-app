@@ -109,8 +109,12 @@ jobs:
           npm run start &
           SERVER_PID=$!
 
-          # Ejecutar las pruebas y capturar el resumen
-          npm run test:all | tee test-summary.log
+          # Esperar a que el servidor esté listo en el puerto 3000
+          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
+          npx wait-on http://localhost:${PORT}/products
+
+          # Ejecutar todas las pruebas
+          npm run test:all
 
           # Detener el servidor
           echo "Deteniendo el servidor..."
@@ -129,8 +133,8 @@ jobs:
           echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
           npx wait-on http://localhost:${PORT}/products
 
-          # Ejecutar las pruebas de Selenium y capturar errores
-          npm run selenium-test 2> error.log || echo "Las pruebas de Selenium fallaron."
+          # Ejecutar las pruebas de Selenium
+          npm run selenium-test
 
           # Detener el servidor
           echo "Deteniendo el servidor..."
@@ -149,54 +153,21 @@ jobs:
           echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
           npx wait-on http://localhost:${PORT}/products
 
-          # Ejecutar las pruebas de Cypress y capturar logs
-          npm run test:e2e | tee cypress-test.log
+          # Ejecutar las pruebas de Cypress
+          npm run test:e2e
 
           # Detener el servidor
           echo "Deteniendo el servidor..."
           kill $SERVER_PID
 
-      - name: Mostrar resultados de Cypress
-        run: |
-          echo "Mostrando resultados de pruebas de Cypress:"
-          cat cypress-test.log || echo "No se encontraron logs de Cypress."
-
-      - name: Mostrar resultados de JMeter
-        run: |
-          echo "Mostrando resultados de pruebas de JMeter:"
-          cat testResults.jtl || echo "No se generó testResults.jtl."
-
-      - name: Verificar informes de JMeter
-        run: |
-          echo "Verificando contenido de report:"
-          ls -la report
-
-      - name: Subir logs como artefactos
+      - name: Guardar resultados de pruebas
         uses: actions/upload-artifact@v3
         with:
           name: test-logs
           path: |
-            test-summary.log
-            error.log
-            cypress-test.log
-            report/
-
-      - name: Subir reportes de pruebas
-        uses: actions/upload-artifact@v3
-        with:
-          name: test-reports
-          path: |
-            cypress/reports/mochawesome.json
-            cypress/reports/mochawesome.html
+            cypress/reports/
             testResults.jtl
-
-      - name: Enviar notificación de éxito
-        if: success()
-        env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-        run: node send-email-success.js
+            report/
 
   desplegar:
     needs: construir-y-probar
@@ -214,26 +185,38 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
-  notificar:
+  notificar-success:
+    needs: construir-y-probar
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Descargar artefactos de pruebas
+        uses: actions/download-artifact@v3
+        with:
+          name: test-logs
+          path: ./logs
+
+      - name: Enviar notificación por correo electrónico (Éxito)
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+        run: node send-email-success.js
+
+  notificar-failure:
     needs: construir-y-probar
     runs-on: ubuntu-latest
     if: failure()
 
     steps:
-      - name: Obtener código
-        uses: actions/checkout@v3
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
+      - name: Descargar artefactos de pruebas
+        uses: actions/download-artifact@v3
         with:
-          node-version: '20.x'
+          name: test-logs
+          path: ./logs
 
-      - name: Instalar dependencias
-        run: npm ci
-
-      - name: Enviar notificación por correo electrónico
+      - name: Enviar notificación por correo electrónico (Fallo)
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-          GITHUB_RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: node send-email-failure.js
