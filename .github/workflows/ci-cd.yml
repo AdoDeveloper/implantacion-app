@@ -1,0 +1,57 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.17.0'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lint
+        run: npx cross-env NODE_ENV=test npm run lint
+
+      - name: Run Tests
+        run: npx cross-env NODE_ENV=test npm run test:all
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to Render
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/{SERVICE_ID}/deploys" \
+          -H "Authorization: Bearer $RENDER_API_KEY"
+
+  notify:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Send email notification
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+        run: |
+          node send-email.js

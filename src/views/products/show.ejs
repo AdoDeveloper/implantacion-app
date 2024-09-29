@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/css/styles.css">
+    <title>Product Details</title>
+</head>
+<body>
+    <h1>Product Details</h1>
+    
+    <div class="product-details">
+        <p><strong>Name:</strong> <%= product.name %></p>
+        <p><strong>Description:</strong> <%= product.description %></p>
+        <p><strong>Price:</strong> $<%= product.price.toFixed(2) %></p>
+    </div>
+
+    <div class="actions">
+        <a href="/products/<%= product.id %>/edit" class="button edit">Edit</a>
+        <form action="/products/<%= product.id %>/delete" method="POST" style="display: inline;">
+            <button type="submit" name="delete" class="button delete">Delete</button>
+        </form>
+    </div>
+
+    <a href="/products" class="back-link">Back to Product List</a>
+    
+    <script src="/js/scripts.js"></script>
+</body>
+</html>

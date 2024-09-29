@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/css/styles.css">
+    <title><%= product ? 'Edit Product' : 'Add New Product' %></title>
+</head>
+<body>
+    <h1><%= product ? 'Edit Product' : 'Add New Product' %></h1>
+    <form action="<%= product ? '/products/' + product.id + '?_method=PUT' : '/products' %>" method="POST">
+        <label for="name">Name:</label>
+        <input type="text" id="name" name="name" value="<%= product ? product.name : '' %>" required>
+        
+        <label for="description">Description:</label>
+        <textarea id="description" name="description" required><%= product ? product.description : '' %></textarea>
+        
+        <label for="price">Price:</label>
+        <input type="number" step="0.01" id="price" name="price" value="<%= product ? product.price : '' %>" required>
+        
+        <button type="submit"><%= product ? 'Update Product' : 'Add Product' %></button>
+    </form>
+    <a href="/products" class="back-link">Back to Product List</a>
+    
+    <script src="/js/scripts.js"></script>
+</body>
+</html>

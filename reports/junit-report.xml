@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="3" failures="0" errors="0" time="4.125">
+  <testsuite name="Integración de Productos" errors="0" failures="0" skipped="0" timestamp="2024-09-28T16:56:04" time="4.025" tests="3">
+    <testcase classname="Integración de Productos Debe obtener todos los productos" name="Integración de Productos Debe obtener todos los productos" time="0.989">
+    </testcase>
+    <testcase classname="Integración de Productos Debe crear un nuevo producto" name="Integración de Productos Debe crear un nuevo producto" time="1.14">
+    </testcase>
+    <testcase classname="Integración de Productos Debe eliminar un producto" name="Integración de Productos Debe eliminar un producto" time="0.949">
+    </testcase>
+  </testsuite>
+</testsuites>
