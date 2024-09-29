@@ -75,7 +75,7 @@ jobs:
       - name: Configurar ChromeDriver
         run: |
           # Definir la versión de ChromeDriver que deseas instalar
-          CHROME_DRIVER_VERSION=131.0.6746.0
+          CHROME_DRIVER_VERSION=129.0.6668.70
 
           # Definir la URL de descarga basada en la versión
           CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
