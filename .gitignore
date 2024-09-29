@@ -4,3 +4,8 @@ node_modules
 .vscode
 jmeter.log
 testResults.jtl
+/report
+/cypress/videos
+/cypress/screenshots
+/cypress/reports
+/testResults.jtl
