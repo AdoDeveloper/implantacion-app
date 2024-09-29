@@ -19,13 +19,13 @@ jobs:
           node-version: '20.17.0'
 
       - name: Install dependencies
-        run: npm install
+        run: npx cross-env npm install  # Usar cross-env para evitar problemas de compatibilidad
 
       - name: Run Lint
-        run: npx cross-env NODE_ENV=test npm run lint
+        run: npx cross-env NODE_ENV=test npm run lint  # Usar cross-env con NODE_ENV
 
       - name: Run Tests
-        run: npx cross-env NODE_ENV=test npm run test:all
+        run: npx cross-env NODE_ENV=test npm run test:all  # Usar cross-env para las pruebas
 
   deploy:
     needs: build-and-test
@@ -49,15 +49,19 @@ jobs:
     if: failure()
 
     steps:
-
       - name: Checkout code
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.17.0'
+
+      - name: Install dependencies
+        run: npx cross-env npm install  # Usar cross-env para evitar problemas de compatibilidad
 
       - name: Send email notification
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-        run: |
-          node send-email.js
-        working-directory: ./
-
+        run: npx cross-env node send-email.js  # Usar cross-env para ejecutar el script con nodemailer
