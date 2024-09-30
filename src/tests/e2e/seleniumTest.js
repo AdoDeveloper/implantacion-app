@@ -150,6 +150,7 @@ const chrome = require('selenium-webdriver/chrome');
     } catch (screenshotError) {
       console.error('Error al capturar la pantalla:', screenshotError);
     }
+    process.exit(1); // Finalizar con un código de error
   } finally {
     await driver.quit();
   }
