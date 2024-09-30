@@ -207,18 +207,15 @@ jobs:
               - name: Listar últimos 5 commits
                 run: git log -5 --oneline
         
-              - name: Configurar Git
-                run: |
-                  git config --global user.name "${{ secrets.GIT_USER_NAME }}"
-                  git config --global user.email "${{ secrets.GIT_USER_EMAIL }}"
-        
               - name: Revertir el último merge si hay fallo
                 if: ${{ env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != '' }}
                 env:
-                  GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}
+                  GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal que tiene permisos completos
                 run: |
                   echo "Intentando revertir el merge commit: $LAST_MERGE_COMMIT"
                   git revert -m 1 $LAST_MERGE_COMMIT --no-edit
+                  # Configurar el token en la URL de push para permitir la autenticación
+                  git remote set-url origin https://${{ secrets.TOKEN_REPO }}@github.com/${{ github.repository }}
                   git push origin main || (echo "Error al hacer push del revert" && exit 1)
                   echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
         
