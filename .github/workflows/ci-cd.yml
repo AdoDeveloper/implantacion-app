@@ -13,7 +13,7 @@ on:
 jobs:
   construir-y-probar:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Aumentado para acomodar todos los pasos
+    timeout-minutes: 5
 
     services:
       mysql:
@@ -38,6 +38,8 @@ jobs:
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
         timeout-minutes: 2
 
       - name: Configurar Node.js
@@ -88,10 +90,7 @@ jobs:
 
       - name: Configurar ChromeDriver
         run: |
-          # Definir la versión de ChromeDriver que deseas instalar
           CHROME_DRIVER_VERSION=129.0.6668.70
-
-          # Definir la URL de descarga basada en la versión
           CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
 
           echo "Descargando ChromeDriver versión ${CHROME_DRIVER_VERSION} desde ${CHROME_DRIVER_URL}..."
@@ -106,28 +105,26 @@ jobs:
           echo "Asignando permisos de ejecución a ChromeDriver..."
           sudo chmod +x /usr/local/bin/chromedriver
 
-          # Verificar la instalación
           echo "Verificando la versión instalada de ChromeDriver..."
           chromedriver --version
 
-          # Limpieza de archivos temporales
           rm chromedriver-linux64.zip
           rm -rf chromedriver-linux64/
         timeout-minutes: 2
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
-            set -e
-            export PORT=3000
-            npm run start &
-            SERVER_PID=$!
-            echo "Esperando a que el servidor esté listo..."
-            sleep 10  # Espera 10 segundos
-            npx wait-on http://localhost:${PORT}/products
-            npm run test:all
-            echo "Deteniendo el servidor..."
-            kill $SERVER_PID
-        timeout-minutes: 2
+          set -e
+          export PORT=3000
+          npm run start &
+          SERVER_PID=$!
+          echo "Esperando 90 segundos a que el servidor esté listo..."
+          sleep 90  # Espera 90 segundos
+          npx wait-on http://localhost:${PORT}/products
+          npm run test:all
+          echo "Deteniendo el servidor..."
+          kill $SERVER_PID
+        timeout-minutes: 1.5
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
@@ -168,6 +165,8 @@ jobs:
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Obtener todo el historial de commits
 
       - name: Desplegar en Render
         env:
@@ -177,49 +176,68 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notificar-fallo:
-            needs: construir-y-probar
-            runs-on: ubuntu-latest
-            if: failure()
-              
-            steps:
-              - name: Obtener código
-                uses: actions/checkout@v3
-              
-              - name: Configurar Node.js
-                uses: actions/setup-node@v3
-                with:
-                  node-version: '20.x'
-              
-              - name: Instalar dependencias
-                run: npm ci
-              
-              - name: Obtener información del último merge
-                id: last_merge
-                run: |
-                  # Obtener el SHA del último commit merge en la rama principal
-                  LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
-                  echo "Último commit de merge: $LAST_MERGE_COMMIT"
-                  echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
-              
-              - name: Verificar LAST_MERGE_COMMIT
-                run: echo "LAST_MERGE_COMMIT=${{ env.LAST_MERGE_COMMIT }}"
-              
-              - name: Revertir el último merge si hay fallo
-                if: ${{ env.LAST_MERGE_COMMIT != '' }}
-                env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                run: |
-                  echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
-                  git revert -m 1 $LAST_MERGE_COMMIT --no-edit
-                  git push origin main
-                  echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
-              
-              - name: Enviar notificación por correo electrónico de fallo
-                env:
-                    GMAIL_USER: ${{ secrets.GMAIL_USER }}
-                    GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-                    TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
-                run: node send-email-failure.js
+    needs: construir-y-probar
+    runs-on: ubuntu-latest
+    if: ${{ failure() || cancelled() }}
+    
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Obtener todo el historial de commits
+      
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Obtener información del último merge
+        id: last_merge
+        run: |
+          # Verificar si el evento es un pull_request y si fue merged
+          if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
+            LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
+            echo "Último commit de merge: $LAST_MERGE_COMMIT"
+            echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
+          else
+            echo "El PR no fue mergeado. No se necesita revertir."
+            echo "LAST_MERGE_COMMIT=" >> $GITHUB_ENV
+          fi
+
+      - name: Verificar LAST_MERGE_COMMIT
+        run: echo "LAST_MERGE_COMMIT=${{ env.LAST_MERGE_COMMIT }}"
+
+      - name: Listar últimos 5 commits
+        run: git log -5 --oneline
+
+      - name: Revertir el último merge si hay fallo
+        if: ${{ env.LAST_MERGE_COMMIT != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}  # Asegúrate de que este secreto tenga permisos de escritura
+        run: |
+          echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
+          git revert -m 1 $LAST_MERGE_COMMIT --no-edit
+          git push origin main
+          echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
+
+      - name: Confirmar Revertido Exitoso
+        run: |
+          if git log -1 --grep="Revert"; then
+            echo "Revertido exitosamente el commit: $LAST_MERGE_COMMIT"
+          else
+            echo "No se pudo revertir el commit: $LAST_MERGE_COMMIT"
+            exit 1
+          fi
+
+      - name: Enviar notificación por correo electrónico de fallo
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+        run: node send-email-failure.js
 
   notificar-exito:
     needs: construir-y-probar
@@ -229,6 +247,8 @@ jobs:
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Obtener todo el historial de commits
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
