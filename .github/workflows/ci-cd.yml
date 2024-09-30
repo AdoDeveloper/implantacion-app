@@ -176,73 +176,68 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notificar-fallo:
-    needs: construir-y-probar
-    runs-on: ubuntu-latest
-    if: ${{ failure() || cancelled() }}
-    
-    steps:
-      - name: Obtener código
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0  # Obtener todo el historial de commits
-
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-
-      - name: Instalar dependencias
-        run: npm ci
-
-      - name: Obtener información del último merge
-        id: last_merge
-        run: |
-          # Verificar si el evento es un pull_request y si fue merged
-          if [ "${{ github.event.pull_request.merged }}" = "true" ]; then
-            LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
-            echo "Último commit de merge: $LAST_MERGE_COMMIT"
-            echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
-          else
-            echo "El PR no fue mergeado. No se necesita revertir."
-            echo "LAST_MERGE_COMMIT=" >> $GITHUB_ENV
-          fi
-
-      - name: Verificar LAST_MERGE_COMMIT
-        run: echo "LAST_MERGE_COMMIT=${{ env.LAST_MERGE_COMMIT }}"
-
-      - name: Listar últimos 5 commits
-        run: git log -5 --oneline
-
-      - name: Configurar Git
-        run: |
-          git config --global user.name "${{ secrets.GIT_USER_NAME }}"
-          git config --global user.email "${{ secrets.GIT_USER_EMAIL }}"
-
-      - name: Revertir el último merge si hay fallo
-        if: ${{ env.LAST_MERGE_COMMIT != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}  # Usar GITHUB_TOKEN
-        run: |
-          echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
-          git revert -m 1 $LAST_MERGE_COMMIT --no-edit
-          git push origin main
-          echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
-
-      - name: Confirmar Revertido Exitoso
-        run: |
-          if git log -1 --grep="Revert"; then
-            echo "Revertido exitosamente el commit: $LAST_MERGE_COMMIT"
-          else
-            echo "No se pudo revertir el commit: $LAST_MERGE_COMMIT"
-            exit 1
-          fi
-
-      - name: Enviar notificación por correo electrónico de fallo
-        env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-          TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
-        run: node send-email-failure.js
+            needs: construir-y-probar
+            runs-on: ubuntu-latest
+            if: failure() || cancelled()
+            steps:
+              - name: Obtener código
+                uses: actions/checkout@v3
+                with:
+                  fetch-depth: 0  # Obtener todo el historial de commits para identificar el merge
+        
+              - name: Configurar Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '20.x'
+        
+              - name: Instalar dependencias
+                run: npm ci
+        
+              - name: Obtener información del último merge
+                id: last_merge
+                run: |
+                  # Intentar obtener el último commit de merge
+                  LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
+                  echo "Último commit de merge: $LAST_MERGE_COMMIT"
+                  echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
+        
+              - name: Verificar LAST_MERGE_COMMIT
+                run: echo "LAST_MERGE_COMMIT=${{ env.LAST_MERGE_COMMIT }}"
+        
+              - name: Listar últimos 5 commits
+                run: git log -5 --oneline
+        
+              - name: Configurar Git
+                run: |
+                  git config --global user.name "${{ secrets.GIT_USER_NAME }}"
+                  git config --global user.email "${{ secrets.GIT_USER_EMAIL }}"
+        
+              - name: Revertir el último merge si hay fallo
+                if: ${{ env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != '' }}
+                env:
+                  GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}
+                run: |
+                  echo "Intentando revertir el merge commit: $LAST_MERGE_COMMIT"
+                  git revert -m 1 $LAST_MERGE_COMMIT --no-edit
+                  git push origin main || (echo "Error al hacer push del revert" && exit 1)
+                  echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
+        
+              - name: Confirmar Revertido Exitoso
+                run: |
+                  if git log -1 --grep="Revert"; then
+                    echo "Revertido exitosamente el commit: $LAST_MERGE_COMMIT"
+                  else
+                    echo "No se pudo revertir el commit: $LAST_MERGE_COMMIT"
+                    exit 1
+                  fi
+        
+              - name: Enviar notificación por correo electrónico de fallo
+                env:
+                  GMAIL_USER: ${{ secrets.GMAIL_USER }}
+                  GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+                  TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+                run: node send-email-failure.js
+        
 
   notificar-exito:
     needs: construir-y-probar
