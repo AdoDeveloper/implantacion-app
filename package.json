@@ -1,7 +1,6 @@
 {
   "name": "express-crud",
   "version": "1.0.0",
-  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "cross-env NODE_ENV=production node server.js",

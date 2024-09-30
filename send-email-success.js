@@ -1,6 +1,6 @@
-import nodemailer from 'nodemailer';
-import axios from 'axios';
-import dotenv from 'dotenv';
+const nodemailer = require('nodemailer');
+const axios = require('axios');
+const dotenv = require('dotenv');
 
 dotenv.config(); // Cargar variables de entorno
 
