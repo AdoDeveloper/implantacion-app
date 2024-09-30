@@ -48,5 +48,11 @@ describe('createProduct', () => {
 
     expect(res.status).toHaveBeenCalledWith(500);
     expect(res.send).toHaveBeenCalledWith('Error al crear producto');
+
+    // Lanzar un error explícito si la prueba falla para que el pipeline CI/CD lo detecte
+    if (res.status.mock.calls[0][0] !== 500) {
+      console.error('Error: Se esperaba un estado 500 pero no se recibió');
+      process.exit(1); // Código de error para el pipeline
+    }
   });
 });
