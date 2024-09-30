@@ -191,6 +191,7 @@ jobs:
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
         run: node send-email-failure.js
 
   notificar-exito:
@@ -214,4 +215,5 @@ jobs:
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
         run: node send-email-success.js
