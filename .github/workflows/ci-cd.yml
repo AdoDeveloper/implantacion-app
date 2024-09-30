@@ -107,6 +107,7 @@ jobs:
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
+          set -e
           # Definir el puerto para estas pruebas
           export PORT=3000
 
@@ -127,11 +128,13 @@ jobs:
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
+          set -e
           # Ejecutar las pruebas de Selenium
           npm run selenium-test
 
       - name: Ejecutar pruebas E2E con Cypress
         run: |
+          set -e
           # Ejecutar las pruebas de Cypress
           npm run test:e2e
 
