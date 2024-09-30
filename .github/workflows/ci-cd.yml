@@ -40,6 +40,7 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal con permisos completos
         timeout-minutes: 2
 
       - name: Configurar Node.js
@@ -118,7 +119,7 @@ jobs:
           export PORT=3000
           npm run start &
           SERVER_PID=$!
-          echo "Esperando 90 a que el servidor esté listo..."
+          echo "Esperando a que el servidor esté listo..."
           sleep 10  # Espera 10 segundos
           npx wait-on http://localhost:${PORT}/products
           npm run test:all
@@ -242,7 +243,6 @@ jobs:
     needs: construir-y-probar
     runs-on: ubuntu-latest
     if: success()
-
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
@@ -257,9 +257,28 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
-      - name: Enviar notificación por correo electrónico de éxito
+      - name: Determinar si el commit es un revert
+        id: check_revert
+        run: |
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+          if [[ "$COMMIT_MESSAGE" == Revert* ]]; then
+            echo "IS_REVERT=true" >> $GITHUB_OUTPUT
+          else
+            echo "IS_REVERT=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Enviar notificación de éxito normal
+        if: steps.check_revert.outputs.IS_REVERT == 'false'
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
           TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
         run: node send-email-success.js
+
+      - name: Enviar notificación de éxito tras revert
+        if: steps.check_revert.outputs.IS_REVERT == 'true'
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+          TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+        run: node send-email-success-revert.js

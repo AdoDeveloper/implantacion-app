@@ -1,3 +1,4 @@
+// send-email-success.js
 const nodemailer = require('nodemailer');
 const axios = require('axios');
 const dotenv = require('dotenv');
