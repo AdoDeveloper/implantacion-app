@@ -13,7 +13,7 @@ on:
 jobs:
   construir-y-probar:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
 
     services:
       mysql:
@@ -118,8 +118,8 @@ jobs:
           export PORT=3000
           npm run start &
           SERVER_PID=$!
-          echo "Esperando 90 segundos a que el servidor esté listo..."
-          sleep 90  # Espera 90 segundos
+          echo "Esperando 90 a que el servidor esté listo..."
+          sleep 10  # Espera 10 segundos
           npx wait-on http://localhost:${PORT}/products
           npm run test:all
           echo "Deteniendo el servidor..."
