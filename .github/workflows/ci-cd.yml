@@ -107,24 +107,28 @@ jobs:
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
-          set -e
-          # Definir el puerto para estas pruebas
-          export PORT=3000
-
-          # Iniciar el servidor en segundo plano
-          npm run start &
-          SERVER_PID=$!
-
-          # Esperar a que el servidor esté listo en el puerto 3000
-          echo "Esperando a que el servidor esté listo en el puerto ${PORT}..."
-          npx wait-on http://localhost:${PORT}/products
-
-          # Ejecutar todas las pruebas
-          npm run test:all
-
-          # Detener el servidor
-          # echo "Deteniendo el servidor..."
-          # kill $SERVER_PID
+            set -e
+            # Definir el puerto para estas pruebas
+            export PORT=3000
+        
+            # Iniciar el servidor en segundo plano
+            npm run start &
+            SERVER_PID=$!
+        
+            # Esperar 30 segundos para que el servidor esté listo
+            echo "Esperando 30 segundos a que el servidor esté listo..."
+            sleep 30
+        
+            # Verificar que el servidor está listo
+            echo "Verificando si el servidor está respondiendo..."
+            npx wait-on http://localhost:${PORT}/products
+        
+            # Ejecutar todas las pruebas
+            npm run test:all
+        
+            # Detener el servidor
+            echo "Deteniendo el servidor..."
+            kill $SERVER_PID
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
