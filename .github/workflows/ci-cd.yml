@@ -170,56 +170,46 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notificar-fallo:
-      needs: construir-y-probar
-      runs-on: ubuntu-latest
-      if: failure()
-        
-      steps:
-        - name: Obtener código
-          uses: actions/checkout@v3
-        
-        - name: Configurar Node.js
-          uses: actions/setup-node@v3
-          with:
-           node-version: '20.x'
-        
-        - name: Instalar dependencias
-          run: npm ci
-        
-        - name: Obtener información del último merge
-          id: last_merge
-          run: |
-              # Obtener el SHA del último commit merge en la rama principal
-                LAST_MERGE_COMMIT=$(git log -1 --merges --pretty=format:"%H")
-                echo "Último commit de merge: $LAST_MERGE_COMMIT"
-                echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
-
-              - name: Revertir el último merge
-                if: failure()
-                env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            needs: construir-y-probar
+            runs-on: ubuntu-latest
+            if: failure()
+              
+            steps:
+              - name: Obtener código
+                uses: actions/checkout@v3
+              
+              - name: Configurar Node.js
+                uses: actions/setup-node@v3
+                with:
+                 node-version: '20.x'
+              
+              - name: Instalar dependencias
+                run: npm ci
+              
+              - name: Obtener información del último merge
+                id: last_merge
                 run: |
-                    if [ -n "$LAST_MERGE_COMMIT" ]; then
-                    echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
-                      curl -X POST \
-                        -H "Authorization: token $GITHUB_TOKEN" \
-                        -H "Accept: application/vnd.github.v3+json" \
-                        "https://api.github.com/repos/${{ github.repository }}/git/commits" \
-                      -d '{"message": "Revertir el último merge fallido", "parents": ["'"$LAST_MERGE_COMMIT"'"], "tree": "'"$(git write-tree)"'"}'
-                    
-                  # Revertir el commit de manera local
-                  git revert -m 1 $LAST_MERGE_COMMIT --no-edit
-                  git push origin main
-                else
-                    echo "No se encontró un commit de merge para revertir."
-                fi
+                  # Obtener el SHA del último commit merge en la rama principal
+                  LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
+                  echo "Último commit de merge: $LAST_MERGE_COMMIT"
+                  echo "::set-output name=LAST_MERGE_COMMIT::$LAST_MERGE_COMMIT"
+                shell: bash
         
-        - name: Enviar notificación por correo electrónico de fallo
-          env:
-              GMAIL_USER: ${{ secrets.GMAIL_USER }}
-              GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-              TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
-          run: node send-email-failure.js
+              - name: Revertir el último merge si hay fallo
+                if: failure() && steps.last_merge.outputs.LAST_MERGE_COMMIT != ''
+                env:
+                  GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}
+                run: |
+                  echo "Revirtiendo el merge commit: ${{ steps.last_merge.outputs.LAST_MERGE_COMMIT }}"
+                  git revert -m 1 ${{ steps.last_merge.outputs.LAST_MERGE_COMMIT }} --no-edit
+                  git push origin main
+                
+              - name: Enviar notificación por correo electrónico de fallo
+                env:
+                    GMAIL_USER: ${{ secrets.GMAIL_USER }}
+                    GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+                    TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+                run: node send-email-failure.js
 
   notificar-exito:
     needs: construir-y-probar
