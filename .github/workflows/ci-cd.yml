@@ -207,6 +207,11 @@ jobs:
               - name: Listar últimos 5 commits
                 run: git log -5 --oneline
         
+              - name: Configurar Git
+                run: |
+                  git config --global user.name "${{ secrets.GIT_USER_NAME }}"
+                  git config --global user.email "${{ secrets.GIT_USER_EMAIL }}"
+
               - name: Revertir el último merge si hay fallo
                 if: ${{ env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != '' }}
                 env:
