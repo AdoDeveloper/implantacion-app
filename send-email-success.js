@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { Octokit } from '@octokit/rest';
+const nodemailer = require('nodemailer');
+const { Octokit } = require('@octokit/rest');
 
 // Configurar el transportador de Nodemailer
 const transporter = nodemailer.createTransport({
@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport({
 
 // Configurar Octokit para acceder a la API de GitHub
 const octokit = new Octokit({
-  auth: process.env.TOKEN_REPO, // Usar TOKEN_REPO desde las variables de entorno
+  auth: process.env.GITHUB_PAT, // Asegúrate de tener tu GITHUB_PAT configurado en las variables de entorno
 });
 
 const repoOwner = "AdoDeveloper";
@@ -20,11 +20,11 @@ const repoName = "implantacion-app";
 
 async function sendSuccessEmail() {
   try {
-    // Obtener información de los últimos 5 commits
+    // Obtener información del último commit (push o merge)
     const commits = await octokit.repos.listCommits({
       owner: repoOwner,
       repo: repoName,
-      per_page: 5,
+      per_page: 5, // Obtener los últimos 5 commits
     });
 
     const lastCommit = commits.data[0];
@@ -58,16 +58,6 @@ async function sendSuccessEmail() {
       .map(collaborator => `${collaborator.login} (${collaborator.html_url})`)
       .join(', ');
 
-    // Crear la lista de los últimos commits para el historial
-    const commitHistory = commits.data.map(commit => `
-      <li>
-        <strong>Mensaje:</strong> ${commit.commit.message}<br>
-        <strong>Autor:</strong> ${commit.commit.author.name} (${commit.commit.author.email})<br>
-        <strong>Fecha:</strong> ${new Date(commit.commit.author.date).toLocaleString()}<br>
-        <strong>Enlace al commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha.substring(0, 7)}</a>
-      </li>
-    `).join('');
-
     // Opciones del correo electrónico con toda la información
     const mailOptions = {
       from: process.env.GMAIL_USER,
@@ -92,9 +82,6 @@ async function sendSuccessEmail() {
           </ul>
           <p><strong>Colaboradores del repositorio:</strong></p>
           <ul>${collaboratorList}</ul>
-          <br>
-          <p><strong>Historial de commits recientes:</strong></p>
-          <ul>${commitHistory}</ul>
           <br>
           <p>Puedes revisar los detalles del pipeline en el siguiente enlace:</p>
           <a href="${pipelineUrl}" style="color: #1e88e5; text-decoration: none; font-weight: bold;">🔗 Ver detalles del pipeline</a>

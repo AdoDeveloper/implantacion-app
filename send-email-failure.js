@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { Octokit } from '@octokit/rest';
+const nodemailer = require('nodemailer');
+const { Octokit } = require('@octokit/rest');
 
 // Configurar el transportador de Nodemailer
 const transporter = nodemailer.createTransport({
