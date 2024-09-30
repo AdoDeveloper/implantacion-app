@@ -70,6 +70,48 @@ jobs:
         run: npm run lint
         timeout-minutes: 1.5
 
+      - name: Instalar JMeter
+        run: |
+          wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          sudo mv apache-jmeter-5.6.3 /opt/jmeter
+          sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
+
+      - name: Instalar Chrome
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo apt install -y ./google-chrome-stable_current_amd64.deb
+
+      - name: Configurar ChromeDriver
+        run: |
+          # Definir la versión de ChromeDriver que deseas instalar
+          CHROME_DRIVER_VERSION=129.0.6668.70
+
+          # Definir la URL de descarga basada en la versión
+          CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
+
+          echo "Descargando ChromeDriver versión ${CHROME_DRIVER_VERSION} desde ${CHROME_DRIVER_URL}..."
+          wget -q ${CHROME_DRIVER_URL} -O chromedriver-linux64.zip
+
+          echo "Descomprimiendo ChromeDriver..."
+          unzip -o chromedriver-linux64.zip
+
+          echo "Moviendo ChromeDriver a /usr/local/bin..."
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+
+          echo "Asignando permisos de ejecución a ChromeDriver..."
+          sudo chmod +x /usr/local/bin/chromedriver
+
+          # Verificar la instalación
+          echo "Verificando la versión instalada de ChromeDriver..."
+          chromedriver --version
+
+          # Limpieza de archivos temporales
+          rm chromedriver-linux64.zip
+          rm -rf chromedriver-linux64/
+
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
             set -e
