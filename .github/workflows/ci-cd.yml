@@ -13,8 +13,8 @@ on:
 jobs:
   construir-y-probar:
     runs-on: ubuntu-latest
-    timeout-minutes: 2  # Limitar el tiempo total del job a 2 minutos como margen de seguridad
-    
+    timeout-minutes: 15  # Aumentado para acomodar todos los pasos
+
     services:
       mysql:
         image: mysql:8.0
@@ -38,17 +38,17 @@ jobs:
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
-        timeout-minutes: 1.5  # Limitar el tiempo de este paso a 1.5 minutos
+        timeout-minutes: 2
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Instalar dependencias
         run: npm ci
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Esperar a que MySQL esté listo
         run: |
@@ -60,15 +60,15 @@ jobs:
             echo "Esperando a MySQL..."
             sleep 1
           done
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Ejecutar migraciones de la base de datos
         run: npx prisma migrate deploy
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Ejecutar Lint
         run: npm run lint
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Instalar JMeter
         run: |
@@ -76,6 +76,7 @@ jobs:
           tar -xzf apache-jmeter-5.6.3.tgz
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
+        timeout-minutes: 2
 
       - name: Instalar Chrome
         run: |
@@ -83,6 +84,7 @@ jobs:
           sudo apt-get install -y wget unzip
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
+        timeout-minutes: 2
 
       - name: Configurar ChromeDriver
         run: |
@@ -111,6 +113,7 @@ jobs:
           # Limpieza de archivos temporales
           rm chromedriver-linux64.zip
           rm -rf chromedriver-linux64/
+        timeout-minutes: 2
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
@@ -118,40 +121,44 @@ jobs:
             export PORT=3000
             npm run start &
             SERVER_PID=$!
-            echo "Esperando a que el servidor esté listo..."
+            echo "Esperando 90 segundos a que el servidor esté listo..."
+            sleep 90  # Espera 90 segundos
             npx wait-on http://localhost:${PORT}/products
             npm run test:all
             echo "Deteniendo el servidor..."
             kill $SERVER_PID
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Ejecutar pruebas E2E con Selenium
         run: |
           set -e
           npm run selenium-test
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Ejecutar pruebas E2E con Cypress
         run: |
           set -e
           npm run test:e2e
-        timeout-minutes: 1.5
+        timeout-minutes: 2
 
       - name: Mostrar resultados de Cypress
         run: |
           echo "Mostrando resultados de pruebas de Cypress:"
           cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
           cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
+        timeout-minutes: 2
 
       - name: Mostrar resultados de JMeter
         run: |
           echo "Mostrando resultados de pruebas de JMeter:"
           cat testResults.jtl || echo "No se generó testResults.jtl."
+        timeout-minutes: 2
 
       - name: Verificar informes de JMeter
         run: |
           echo "Verificando contenido de report:"
           ls -la report
+        timeout-minutes: 2
 
   desplegar:
     needs: construir-y-probar
@@ -170,46 +177,46 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notificar-fallo:
-            needs: construir-y-probar
-            runs-on: ubuntu-latest
-            if: failure()
-              
-            steps:
-              - name: Obtener código
-                uses: actions/checkout@v3
-              
-              - name: Configurar Node.js
-                uses: actions/setup-node@v3
-                with:
-                 node-version: '20.x'
-              
-              - name: Instalar dependencias
-                run: npm ci
-              
-              - name: Obtener información del último merge
-                id: last_merge
-                run: |
-                  # Obtener el SHA del último commit merge en la rama principal
-                  LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
-                  echo "Último commit de merge: $LAST_MERGE_COMMIT"
-                  echo "::set-output name=LAST_MERGE_COMMIT::$LAST_MERGE_COMMIT"
-                shell: bash
-        
-              - name: Revertir el último merge si hay fallo
-                if: failure() && steps.last_merge.outputs.LAST_MERGE_COMMIT != ''
-                env:
-                  GITHUB_TOKEN: ${{ secrets.TOKEN_REPO }}
-                run: |
-                  echo "Revirtiendo el merge commit: ${{ steps.last_merge.outputs.LAST_MERGE_COMMIT }}"
-                  git revert -m 1 ${{ steps.last_merge.outputs.LAST_MERGE_COMMIT }} --no-edit
-                  git push origin main
-                
-              - name: Enviar notificación por correo electrónico de fallo
-                env:
-                    GMAIL_USER: ${{ secrets.GMAIL_USER }}
-                    GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-                    TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
-                run: node send-email-failure.js
+    needs: construir-y-probar
+    runs-on: ubuntu-latest
+    if: failure()
+      
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+      
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+      
+      - name: Instalar dependencias
+        run: npm ci
+      
+      - name: Obtener información del último merge
+        id: last_merge
+        run: |
+          # Obtener el SHA del último commit merge en la rama principal
+          LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
+          echo "Último commit de merge: $LAST_MERGE_COMMIT"
+          echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
+      
+      - name: Revertir el último merge si hay fallo
+        if: ${{ env.LAST_MERGE_COMMIT != '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Asegúrate de que este secreto esté configurado correctamente
+        run: |
+          echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
+          git revert -m 1 $LAST_MERGE_COMMIT --no-edit
+          git push origin main
+          echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
+      
+      - name: Enviar notificación por correo electrónico de fallo
+        env:
+            GMAIL_USER: ${{ secrets.GMAIL_USER }}
+            GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+            TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+        run: node send-email-failure.js
 
   notificar-exito:
     needs: construir-y-probar
