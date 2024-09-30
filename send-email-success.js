@@ -16,6 +16,15 @@ const transporter = nodemailer.createTransport({
 const repoOwner = "AdoDeveloper";
 const repoName = "implantacion-app";
 
+// Función para formatear la fecha y hora en el formato de El Salvador
+function formatDateToElSalvador(dateString) {
+  return new Intl.DateTimeFormat('es-SV', {
+    dateStyle: 'full',
+    timeStyle: 'medium',
+    timeZone: 'America/El_Salvador',
+  }).format(new Date(dateString));
+}
+
 async function sendSuccessEmail() {
   try {
     // Configuración de la cabecera de autenticación
@@ -32,17 +41,17 @@ async function sendSuccessEmail() {
     const commitAuthor = lastCommit.commit.author.name;
     const commitEmail = lastCommit.commit.author.email;
     const commitMessage = lastCommit.commit.message;
-    const commitDate = new Date(lastCommit.commit.author.date).toLocaleString();
+    const commitDate = formatDateToElSalvador(lastCommit.commit.author.date);
     const commitUrl = lastCommit.html_url;
 
-     // Obtener la URL del pipeline más reciente
-     const workflowResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs?per_page=1&branch=main&status=completed`, { headers });
-     const lastRun = workflowResponse.data.workflow_runs[0];
-     const pipelineUrl = lastRun.html_url;
-     const pipelineStatus = lastRun.conclusion;
-     const pipelineStartTime = new Date(lastRun.created_at).toLocaleString();
-     const pipelineEndTime = new Date(lastRun.updated_at).toLocaleString();
-     const pipelineDuration = ((new Date(lastRun.updated_at) - new Date(lastRun.created_at)) / 1000).toFixed(2);
+    // Obtener la URL del pipeline más reciente
+    const workflowResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs?per_page=1&branch=main&status=completed`, { headers });
+    const lastRun = workflowResponse.data.workflow_runs[0];
+    const pipelineUrl = lastRun.html_url;
+    const pipelineStatus = lastRun.conclusion;
+    const pipelineStartTime = formatDateToElSalvador(lastRun.created_at);
+    const pipelineEndTime = formatDateToElSalvador(lastRun.updated_at);
+    const pipelineDuration = ((new Date(lastRun.updated_at) - new Date(lastRun.created_at)) / 1000).toFixed(2);
 
     // Obtener información del repositorio
     const repoResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}`, { headers });
@@ -52,9 +61,8 @@ async function sendSuccessEmail() {
     const repoForks = repoDetails.forks_count;
     const repoWatchers = repoDetails.watchers_count;
     const repoUrl = repoDetails.html_url;
-    const repoCreatedAt = new Date(repoDetails.created_at).toLocaleString();
-    const repoUpdatedAt = new Date(repoDetails.updated_at).toLocaleString();
-
+    const repoCreatedAt = formatDateToElSalvador(repoDetails.created_at);
+    const repoUpdatedAt = formatDateToElSalvador(repoDetails.updated_at);
 
     // Obtener los resultados de las pruebas (ejemplo básico)
     const testSummaryResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs/${lastRun.id}/jobs`, { headers });
@@ -77,7 +85,7 @@ async function sendSuccessEmail() {
       <li>
         <strong>Mensaje del Commit:</strong> ${commit.commit.message}<br>
         <strong>Autor:</strong> ${commit.commit.author.name} (${commit.commit.author.email})<br>
-        <strong>Fecha del Commit:</strong> ${new Date(commit.commit.author.date).toLocaleString()}<br>
+        <strong>Fecha del Commit:</strong> ${formatDateToElSalvador(commit.commit.author.date)}<br>
         <strong>Enlace al Commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha}</a><br>
         <strong>Detalle de Commit:</strong> ${commit.commit.message} <br>
       </li>

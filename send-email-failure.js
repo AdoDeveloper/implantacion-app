@@ -16,6 +16,15 @@ const transporter = nodemailer.createTransport({
 const repoOwner = "AdoDeveloper";
 const repoName = "implantacion-app";
 
+// Función para formatear la fecha y hora en el formato de El Salvador
+function formatDateToElSalvador(dateString) {
+  return new Intl.DateTimeFormat('es-SV', {
+    dateStyle: 'full',
+    timeStyle: 'medium',
+    timeZone: 'America/El_Salvador',
+  }).format(new Date(dateString));
+}
+
 async function sendFailureEmail() {
   try {
     // Configuración de la cabecera de autenticación
@@ -32,8 +41,8 @@ async function sendFailureEmail() {
     const repoForks = repoDetails.forks_count;
     const repoWatchers = repoDetails.watchers_count;
     const repoUrl = repoDetails.html_url;
-    const repoCreatedAt = new Date(repoDetails.created_at).toLocaleString();
-    const repoUpdatedAt = new Date(repoDetails.updated_at).toLocaleString();
+    const repoCreatedAt = formatDateToElSalvador(repoDetails.created_at);
+    const repoUpdatedAt = formatDateToElSalvador(repoDetails.updated_at);
 
     // Obtener los últimos 5 commits
     const commitResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=5`, { headers });
@@ -43,7 +52,7 @@ async function sendFailureEmail() {
     const commitAuthor = lastCommit.commit.author.name;
     const commitEmail = lastCommit.commit.author.email;
     const commitMessage = lastCommit.commit.message;
-    const commitDate = new Date(lastCommit.commit.author.date).toLocaleString();
+    const commitDate = formatDateToElSalvador(lastCommit.commit.author.date);
     const commitUrl = lastCommit.html_url;
 
     // Obtener la URL del pipeline más reciente con status failure
@@ -51,8 +60,8 @@ async function sendFailureEmail() {
     const failedRun = workflowResponse.data.workflow_runs[0];
     const failedRunId = failedRun ? failedRun.id : 'Desconocido';
     const pipelineUrl = failedRun ? failedRun.html_url : 'No se encontró la URL del pipeline fallido';
-    const pipelineStartTime = failedRun ? new Date(failedRun.created_at).toLocaleString() : 'Desconocido';
-    const pipelineEndTime = failedRun ? new Date(failedRun.updated_at).toLocaleString() : 'Desconocido';
+    const pipelineStartTime = failedRun ? formatDateToElSalvador(failedRun.created_at) : 'Desconocido';
+    const pipelineEndTime = failedRun ? formatDateToElSalvador(failedRun.updated_at) : 'Desconocido';
     const pipelineDuration = failedRun ? ((new Date(failedRun.updated_at) - new Date(failedRun.created_at)) / 1000).toFixed(2) : 'Desconocido';
 
     // Obtener los resultados de las pruebas
@@ -76,7 +85,7 @@ async function sendFailureEmail() {
       <li>
         <strong>Mensaje:</strong> ${commit.commit.message}<br>
         <strong>Autor:</strong> ${commit.commit.author.name} (${commit.commit.author.email})<br>
-        <strong>Fecha:</strong> ${new Date(commit.commit.author.date).toLocaleString()}<br>
+        <strong>Fecha:</strong> ${formatDateToElSalvador(commit.commit.author.date)}<br>
         <strong>Enlace al commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha}</a>
       </li>
     `).join('');
