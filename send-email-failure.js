@@ -24,6 +24,17 @@ async function sendFailureEmail() {
       'Accept': 'application/vnd.github.v3+json',
     };
 
+    // Obtener información del repositorio
+    const repoResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}`, { headers });
+    const repoDetails = repoResponse.data;
+    const repoDescription = repoDetails.description || 'Sin descripción';
+    const repoStars = repoDetails.stargazers_count;
+    const repoForks = repoDetails.forks_count;
+    const repoWatchers = repoDetails.watchers_count;
+    const repoUrl = repoDetails.html_url;
+    const repoCreatedAt = new Date(repoDetails.created_at).toLocaleString();
+    const repoUpdatedAt = new Date(repoDetails.updated_at).toLocaleString();
+
     // Obtener los últimos 5 commits
     const commitResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=5`, { headers });
     const commits = commitResponse.data;
@@ -38,15 +49,27 @@ async function sendFailureEmail() {
     // Obtener la URL del pipeline más reciente con status failure
     const workflowResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs?per_page=1&branch=main&status=failure`, { headers });
     const failedRun = workflowResponse.data.workflow_runs[0];
-    const pipelineUrl = failedRun ? failedRun.html_url : 'No se encontró la URL del pipeline fallido';
     const failedRunId = failedRun ? failedRun.id : 'Desconocido';
+    const pipelineUrl = failedRun ? failedRun.html_url : 'No se encontró la URL del pipeline fallido';
+    const pipelineStartTime = failedRun ? new Date(failedRun.created_at).toLocaleString() : 'Desconocido';
+    const pipelineEndTime = failedRun ? new Date(failedRun.updated_at).toLocaleString() : 'Desconocido';
+    const pipelineDuration = failedRun ? ((new Date(failedRun.updated_at) - new Date(failedRun.created_at)) / 1000).toFixed(2) : 'Desconocido';
+
+    // Obtener los resultados de las pruebas
+    const testSummaryResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs/${failedRunId}/jobs`, { headers });
+    const tests = testSummaryResponse.data.jobs.reduce((acc, job) => {
+      acc.total += job.steps.length;
+      acc.passed += job.steps.filter(step => step.conclusion === 'success').length;
+      acc.failed += job.steps.filter(step => step.conclusion === 'failure').length;
+      return acc;
+    }, { total: 0, passed: 0, failed: 0 });
 
     // Obtener la lista de colaboradores
     const collaboratorsResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/collaborators`, { headers });
     const collaborators = collaboratorsResponse.data;
     const collaboratorList = collaborators
-      .map(collaborator => `${collaborator.login} (${collaborator.html_url})`)
-      .join(', ');
+      .map(collaborator => `<li>${collaborator.login} - <a href="${collaborator.html_url}" style="color: #1e88e5;">Perfil de GitHub</a></li>`)
+      .join('');
 
     // Crear la lista de los últimos commits para el historial
     const commitHistory = commits.map(commit => `
@@ -54,7 +77,7 @@ async function sendFailureEmail() {
         <strong>Mensaje:</strong> ${commit.commit.message}<br>
         <strong>Autor:</strong> ${commit.commit.author.name} (${commit.commit.author.email})<br>
         <strong>Fecha:</strong> ${new Date(commit.commit.author.date).toLocaleString()}<br>
-        <strong>Enlace al commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha.substring(0, 7)}</a>
+        <strong>Enlace al commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha}</a>
       </li>
     `).join('');
 
@@ -67,21 +90,51 @@ async function sendFailureEmail() {
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 2px solid #f44336; border-radius: 10px;">
           <h2 style="color: #f44336;">🚨 Las pruebas han fallado en el CI/CD Pipeline 🚨</h2>
           <p>⚠️ Las pruebas automatizadas no han pasado. Por favor, revisa los detalles y soluciona los problemas antes del próximo despliegue.</p>
-          <p><strong>Último Commit que provocó el fallo:</strong></p>
+
+          <h3>🔍 Información del Repositorio</h3>
+          <ul>
+            <li><strong>Nombre del Repositorio:</strong> ${repoName}</li>
+            <li><strong>Descripción:</strong> ${repoDescription}</li>
+            <li><strong>Estrellas:</strong> ⭐ ${repoStars}</li>
+            <li><strong>Bifurcaciones:</strong> 🍴 ${repoForks}</li>
+            <li><strong>Vigilantes:</strong> 👀 ${repoWatchers}</li>
+            <li><strong>Creado en:</strong> ${repoCreatedAt}</li>
+            <li><strong>Última actualización:</strong> ${repoUpdatedAt}</li>
+            <li><strong>Enlace al repositorio:</strong> <a href="${repoUrl}" style="color: #1e88e5; text-decoration: none;">Ver Repositorio</a></li>
+          </ul>
+
+          <h3>📝 Último Commit que provocó el fallo</h3>
           <ul>
             <li><strong>Autor:</strong> ${commitAuthor} (${commitEmail})</li>
             <li><strong>Mensaje del Commit:</strong> ${commitMessage}</li>
             <li><strong>Fecha:</strong> ${commitDate}</li>
             <li><strong>Enlace al Commit:</strong> <a href="${commitUrl}" style="color: #1e88e5; text-decoration: none;">Ver Commit</a></li>
           </ul>
-          <p><strong>Colaboradores recientes:</strong></p>
+
+          <h3>🔍 Detalles del Pipeline Fallido:</h3>
+          <ul>
+            <li><strong>Inicio:</strong> ${pipelineStartTime}</li>
+            <li><strong>Fin:</strong> ${pipelineEndTime}</li>
+            <li><strong>Duración:</strong> ${pipelineDuration} segundos</li>
+            <li><strong>Ver Pipeline:</strong> <a href="${pipelineUrl}" style="color: #1e88e5; text-decoration: none;">Ver Detalles</a></li>
+          </ul>
+
+          <h3>🔍 Resultados de las Pruebas:</h3>
+          <ul>
+            <li>Total Pruebas: ${tests.total}</li>
+            <li>Aprobadas: ${tests.passed}</li>
+            <li>Fallidas: ${tests.failed}</li>
+          </ul>
+
+          <h3>👥 Colaboradores del Repositorio</h3>
           <ul>${collaboratorList}</ul>
-          <br>
-          <p><strong>Historial de commits recientes:</strong></p>
+
+          <h3>📜 Historial de Commits Recientes</h3>
           <ul>${commitHistory}</ul>
-          <br>
+
+          <h3>🌐 Enlaces Importantes</h3>
           <p>Puedes revisar los detalles del pipeline fallido en el siguiente enlace:</p>
-          <a href="${pipelineUrl}" style="color: #1e88e5; text-decoration: none; font-weight: bold;">🔗 Ver detalles del pipeline fallido</a>
+          <a href="${pipelineUrl}" style="color: #1e88e5; text-decoration: none; font-weight: bold;">🔗 Ver detalles del pipeline</a>
           <br><br>
           <p style="color: #f44336; font-weight: bold;">¡Revisar y corregir los errores lo antes posible! ⏰</p>
         </div>
