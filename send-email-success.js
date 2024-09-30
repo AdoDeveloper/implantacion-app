@@ -1,5 +1,5 @@
-const nodemailer = require('nodemailer');
-const { Octokit } = require('@octokit/rest');
+import nodemailer from 'nodemailer';
+import { Octokit } from '@octokit/rest';
 
 // Configurar el transportador de Nodemailer
 const transporter = nodemailer.createTransport({
@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Configurar Octokit para acceder a la API de GitHub con el token
+// Configurar Octokit para acceder a la API de GitHub
 const octokit = new Octokit({
   auth: process.env.TOKEN_REPO, // Usar TOKEN_REPO desde las variables de entorno
 });
@@ -20,7 +20,7 @@ const repoName = "implantacion-app";
 
 async function sendSuccessEmail() {
   try {
-    // Obtener información de los últimos 5 commits (puedes ajustar el número según tus necesidades)
+    // Obtener información de los últimos 5 commits
     const commits = await octokit.repos.listCommits({
       owner: repoOwner,
       repo: repoName,
