@@ -7,13 +7,13 @@ const productController = require('../controllers/productController')
 router.get('/new', productController.renderCreateProductForm)
 
 // Ruta para crear un nuevo producto
-router.post('/', productController.createProduct)
+router.get('/', productController.createProduct)
 
 // Ruta para listar todos los productos
 router.get('/', productController.getAllProducts)
 
 // Ruta para ver un solo producto
-router.get('/:id', productController.getProductById)
+router.get('/', productController.getProductById)
 
 // Ruta para mostrar el formulario de edición
 router.get('/:id/edit', productController.renderEditProductForm)
@@ -22,6 +22,6 @@ router.get('/:id/edit', productController.renderEditProductForm)
 router.put('/:id', productController.updateProduct)
 
 // Ruta para eliminar un producto
-router.post('/:id/delete', productController.deleteProduct)
+router.post('/:id', productController.deleteProduct)
 
 module.exports = router
