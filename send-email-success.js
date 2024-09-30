@@ -1,5 +1,8 @@
-const nodemailer = require('nodemailer');
-const { Octokit } = require('@octokit/rest');
+import nodemailer from 'nodemailer';
+import axios from 'axios';
+import dotenv from 'dotenv';
+
+dotenv.config(); // Cargar variables de entorno
 
 // Configurar el transportador de Nodemailer
 const transporter = nodemailer.createTransport({
@@ -10,24 +13,22 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Configurar Octokit para acceder a la API de GitHub
-const octokit = new Octokit({
-  auth: process.env.GITHUB_PAT, // Asegúrate de tener tu GITHUB_PAT configurado en las variables de entorno
-});
-
 const repoOwner = "AdoDeveloper";
 const repoName = "implantacion-app";
 
 async function sendSuccessEmail() {
   try {
-    // Obtener información del último commit (push o merge)
-    const commits = await octokit.repos.listCommits({
-      owner: repoOwner,
-      repo: repoName,
-      per_page: 5, // Obtener los últimos 5 commits
-    });
+    // Configuración de la cabecera de autenticación
+    const headers = {
+      Authorization: `Bearer ${process.env.TOKEN_REPO}`, // Usar el token de acceso personal para autenticación
+      'Accept': 'application/vnd.github.v3+json',
+    };
 
-    const lastCommit = commits.data[0];
+    // Obtener los últimos 5 commits
+    const commitResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/commits?per_page=5`, { headers });
+    const commits = commitResponse.data;
+    
+    const lastCommit = commits[0];
     const commitAuthor = lastCommit.commit.author.name;
     const commitEmail = lastCommit.commit.author.email;
     const commitMessage = lastCommit.commit.message;
@@ -35,28 +36,28 @@ async function sendSuccessEmail() {
     const commitUrl = lastCommit.html_url;
 
     // Obtener la URL del pipeline más reciente
-    const workflowRuns = await octokit.actions.listWorkflowRunsForRepo({
-      owner: repoOwner,
-      repo: repoName,
-      per_page: 1,
-      branch: "main",
-      status: "completed",
-    });
-
-    const lastRun = workflowRuns.data.workflow_runs[0];
+    const workflowResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/actions/runs?per_page=1&branch=main&status=completed`, { headers });
+    const lastRun = workflowResponse.data.workflow_runs[0];
     const pipelineUrl = lastRun.html_url;
     const pipelineStatus = lastRun.conclusion;
     const pipelineDuration = (new Date(lastRun.updated_at) - new Date(lastRun.created_at)) / 1000;
 
-    // Obtener la lista completa de colaboradores
-    const collaborators = await octokit.repos.listCollaborators({
-      owner: repoOwner,
-      repo: repoName,
-    });
-
-    const collaboratorList = collaborators.data
+    // Obtener la lista de colaboradores
+    const collaboratorsResponse = await axios.get(`https://api.github.com/repos/${repoOwner}/${repoName}/collaborators`, { headers });
+    const collaborators = collaboratorsResponse.data;
+    const collaboratorList = collaborators
       .map(collaborator => `${collaborator.login} (${collaborator.html_url})`)
       .join(', ');
+
+    // Crear la lista de los últimos commits para el historial
+    const commitHistory = commits.map(commit => `
+      <li>
+        <strong>Mensaje:</strong> ${commit.commit.message}<br>
+        <strong>Autor:</strong> ${commit.commit.author.name} (${commit.commit.author.email})<br>
+        <strong>Fecha:</strong> ${new Date(commit.commit.author.date).toLocaleString()}<br>
+        <strong>Enlace al commit:</strong> <a href="${commit.html_url}" style="color: #1e88e5;">${commit.sha.substring(0, 7)}</a>
+      </li>
+    `).join('');
 
     // Opciones del correo electrónico con toda la información
     const mailOptions = {
@@ -83,6 +84,9 @@ async function sendSuccessEmail() {
           <p><strong>Colaboradores del repositorio:</strong></p>
           <ul>${collaboratorList}</ul>
           <br>
+          <p><strong>Historial de commits recientes:</strong></p>
+          <ul>${commitHistory}</ul>
+          <br>
           <p>Puedes revisar los detalles del pipeline en el siguiente enlace:</p>
           <a href="${pipelineUrl}" style="color: #1e88e5; text-decoration: none; font-weight: bold;">🔗 Ver detalles del pipeline</a>
           <br><br>
@@ -103,7 +107,7 @@ async function sendSuccessEmail() {
       }
     });
   } catch (error) {
-    console.error('Error al obtener información del repositorio o enviar correo:', error);
+    console.error('Error al obtener información del repositorio o enviar correo:', error.response?.data || error.message);
   }
 }
 

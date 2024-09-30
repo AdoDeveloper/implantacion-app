@@ -1,0 +1,35 @@
+{
+    "env": {
+      "es2024": true,
+      "node": true,
+      "jest": true,
+      "cypress/globals": true,
+      "browser": true
+    },
+    "extends": [
+      "eslint:recommended",
+      "plugin:import/recommended",
+      "plugin:cypress/recommended",
+      "prettier"
+    ],
+    "plugins": [
+      "cypress",
+      "import"
+    ],
+    "parserOptions": {
+      "ecmaVersion": 2020, // Asegúrate de que sea al menos 2020 para soportar import/export
+      "sourceType": "module"
+    },
+    "rules": {
+      "no-unused-vars": "warn",
+      "no-undef": "warn"
+    },
+    "settings": {
+      "import/resolver": {
+        "node": {
+          "extensions": [".js", ".mjs", ".ts", ".json"]
+        }
+      }
+    }
+  }
+  
