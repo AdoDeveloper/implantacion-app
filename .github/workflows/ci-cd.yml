@@ -121,8 +121,8 @@ jobs:
             export PORT=3000
             npm run start &
             SERVER_PID=$!
-            echo "Esperando 90 segundos a que el servidor esté listo..."
-            sleep 90  # Espera 90 segundos
+            echo "Esperando a que el servidor esté listo..."
+            sleep 10  # Espera 10 segundos
             npx wait-on http://localhost:${PORT}/products
             npm run test:all
             echo "Deteniendo el servidor..."
@@ -177,46 +177,49 @@ jobs:
           -H "Authorization: Bearer $RENDER_API_KEY"
 
   notificar-fallo:
-    needs: construir-y-probar
-    runs-on: ubuntu-latest
-    if: failure()
-      
-    steps:
-      - name: Obtener código
-        uses: actions/checkout@v3
-      
-      - name: Configurar Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-      
-      - name: Instalar dependencias
-        run: npm ci
-      
-      - name: Obtener información del último merge
-        id: last_merge
-        run: |
-          # Obtener el SHA del último commit merge en la rama principal
-          LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
-          echo "Último commit de merge: $LAST_MERGE_COMMIT"
-          echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
-      
-      - name: Revertir el último merge si hay fallo
-        if: ${{ env.LAST_MERGE_COMMIT != '' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Asegúrate de que este secreto esté configurado correctamente
-        run: |
-          echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
-          git revert -m 1 $LAST_MERGE_COMMIT --no-edit
-          git push origin main
-          echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
-      
-      - name: Enviar notificación por correo electrónico de fallo
-        env:
-            GMAIL_USER: ${{ secrets.GMAIL_USER }}
-            GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
-            TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
-        run: node send-email-failure.js
+            needs: construir-y-probar
+            runs-on: ubuntu-latest
+            if: failure()
+              
+            steps:
+              - name: Obtener código
+                uses: actions/checkout@v3
+              
+              - name: Configurar Node.js
+                uses: actions/setup-node@v3
+                with:
+                  node-version: '20.x'
+              
+              - name: Instalar dependencias
+                run: npm ci
+              
+              - name: Obtener información del último merge
+                id: last_merge
+                run: |
+                  # Obtener el SHA del último commit merge en la rama principal
+                  LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
+                  echo "Último commit de merge: $LAST_MERGE_COMMIT"
+                  echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
+              
+              - name: Verificar LAST_MERGE_COMMIT
+                run: echo "LAST_MERGE_COMMIT=${{ env.LAST_MERGE_COMMIT }}"
+              
+              - name: Revertir el último merge si hay fallo
+                if: ${{ env.LAST_MERGE_COMMIT != '' }}
+                env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                run: |
+                  echo "Revirtiendo el merge commit: $LAST_MERGE_COMMIT"
+                  git revert -m 1 $LAST_MERGE_COMMIT --no-edit
+                  git push origin main
+                  echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
+              
+              - name: Enviar notificación por correo electrónico de fallo
+                env:
+                    GMAIL_USER: ${{ secrets.GMAIL_USER }}
+                    GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
+                    TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
+                run: node send-email-failure.js
 
   notificar-exito:
     needs: construir-y-probar
