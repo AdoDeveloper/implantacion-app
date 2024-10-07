@@ -7,7 +7,6 @@
     "dev": "cross-env NODE_ENV=development nodemon server.js",
     "test": "cross-env NODE_ENV=test jest --verbose",
     "test:unit": "jest --config jest.config.js --testPathPattern=src/tests/unit --passWithNoTests",
-    "coverage": "nyc report --reporter=text",
     "test:integration": "jest --config jest.config.js --testPathPattern=src/tests/integration --passWithNoTests",
     "test:ui": "cypress run --reporter mochawesome --reporter-options reportDir=cypress/reports,overwrite=false,html=true,json=true",
     "test:performance": "jmeter -n -t src/tests/performance/productPerformanceTest.jmx -l testResults.jtl -e -o report",
@@ -40,10 +39,6 @@
     "nodemailer": "^6.9.15"
   },
   "devDependencies": {
-    "@istanbuljs/nyc-config-babel": "^3.0.0",
-    "@stryker-mutator/core": "^8.6.0",
-    "@stryker-mutator/javascript-mutator": "^4.0.0",
-    "@stryker-mutator/jest-runner": "^8.6.0",
     "@types/jest": "^29.5.13",
     "@types/node": "^22.7.4",
     "cypress": "^13.15.0",
