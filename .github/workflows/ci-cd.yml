@@ -52,17 +52,20 @@ jobs:
         run: npm run lint
         timeout-minutes: 2
 
-      - name: Instalar dependencias (incluyendo nyc y babel)
+      - name: Instalar dependencias
         run: |
           npm ci
-          npm install --save-dev nyc @istanbuljs/nyc-config-babel @babel/core @babel/preset-env
+        timeout-minutes: 2
+
+      - name: Instalar nyc globalmente
+        run: npm install -g nyc
         timeout-minutes: 2
       
       - name: Ejecutar pruebas unitarias con cobertura
         run: |
           mkdir -p .nyc_output
-          nyc --reporter=text npm run test:unit
-        timeout-minutes: 2
+          ./node_modules/.bin/nyc --reporter=text npm run test:unit
+        timeout-minutes: 5
 
       - name: Mostrar informe de cobertura
         run: |
