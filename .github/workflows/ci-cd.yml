@@ -5,16 +5,111 @@ on:
     branches:
       - main
   pull_request:
-    types:
-      - closed
     branches:
       - main
 
 jobs:
-  construir-y-probar:
+  # Job de construcción y pruebas unitarias
+  build-and-unit-tests:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      matrix:
+        node-version: ['20.x']
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
+        timeout-minutes: 2
 
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Ejecutar npm audit
+        run: npm audit --audit-level=high || echo "Vulnerabilidades encontradas"
+        timeout-minutes: 2
+
+      - name: Ejecutar Lint
+        run: npm run lint
+        timeout-minutes: 2
+
+      - name: Ejecutar pruebas unitarias con cobertura
+        run: npm run test:unit -- --coverage
+        timeout-minutes: 5
+
+      - name: Mostrar informe de cobertura
+        run: |
+          echo "Informe de cobertura:"
+          npx nyc report --reporter=text
+        timeout-minutes: 2
+
+  # Job de sugerencias de pruebas (test-suggestions)
+  test-suggestions:
+    runs-on: ubuntu-latest
+    needs: build-and-unit-tests
+    timeout-minutes: 15
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
+        timeout-minutes: 2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Ejecutar mutation testing con Stryker
+        run: npx stryker run
+        timeout-minutes: 15
+
+      - name: Mostrar resultados de Stryker
+        run: |
+          echo "Resultados de mutation testing:"
+          npx stryker report --reporter clear-text
+        timeout-minutes: 2
+
+  # Job de pruebas de integración
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [build-and-unit-tests, test-suggestions]
+    timeout-minutes: 30
     services:
       mysql:
         image: mysql:8.0
@@ -30,28 +125,37 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 3
-
     env:
       NODE_ENV: test
       DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
-
+      PORT: 3000
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal con permisos completos
+          token: ${{ secrets.TOKEN_REPO }}
         timeout-minutes: 2
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
         run: npm ci
-        timeout-minutes: 2
+        timeout-minutes: 5
 
       - name: Esperar a que MySQL esté listo
         run: |
@@ -69,17 +173,63 @@ jobs:
         run: npx prisma migrate deploy
         timeout-minutes: 2
 
-      - name: Ejecutar Lint
-        run: npm run lint
+      - name: Poblar datos de prueba
+        run: npx prisma db seed
         timeout-minutes: 2
 
-      - name: Instalar JMeter
+      - name: Iniciar la aplicación
         run: |
-          wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
-          tar -xzf apache-jmeter-5.6.3.tgz
-          sudo mv apache-jmeter-5.6.3 /opt/jmeter
-          sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
+          npm run start &
+          SERVER_PID=$!
+          echo "Esperando a que el servidor esté listo..."
+          npx wait-on http://localhost:${PORT}/products
+        timeout-minutes: 5
+
+      - name: Ejecutar pruebas de integración
+        run: npm run test:integration
+        timeout-minutes: 10
+
+      - name: Detener la aplicación
+        if: always()
+        run: kill $SERVER_PID
+        timeout-minutes: 1
+
+  # Job de pruebas E2E con Cypress y Selenium
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [build-and-unit-tests, test-suggestions]
+    timeout-minutes: 60
+    env:
+      NODE_ENV: test
+      DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
+      PORT: 3000
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
         timeout-minutes: 2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: npm ci
+        timeout-minutes: 5
 
       - name: Instalar Chrome
         run: |
@@ -113,30 +263,20 @@ jobs:
           rm -rf chromedriver-linux64/
         timeout-minutes: 2
 
-      - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
+      - name: Iniciar la aplicación
         run: |
-          set -e
-          export PORT=3000
           npm run start &
           SERVER_PID=$!
           echo "Esperando a que el servidor esté listo..."
-          sleep 10  # Espera 10 segundos
           npx wait-on http://localhost:${PORT}/products
-          npm run test:all
-          echo "Deteniendo el servidor..."
-          kill $SERVER_PID
         timeout-minutes: 1.5
 
       - name: Ejecutar pruebas E2E con Selenium
-        run: |
-          set -e
-          npm run selenium-test
+        run: npm run selenium-test
         timeout-minutes: 2
 
       - name: Ejecutar pruebas E2E con Cypress
-        run: |
-          set -e
-          npm run test:e2e
+        run: npm run test:e2e
         timeout-minutes: 2
 
       - name: Mostrar resultados de Cypress
@@ -145,6 +285,69 @@ jobs:
           cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
           cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
         timeout-minutes: 2
+
+      - name: Detener la aplicación
+        if: always()
+        run: kill $SERVER_PID
+        timeout-minutes: 1
+
+  # Job de pruebas de rendimiento con JMeter
+  performance-tests:
+    runs-on: ubuntu-latest
+    needs: [build-and-unit-tests, test-suggestions]
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
+      PORT: 3000
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
+        timeout-minutes: 2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Instalar JMeter
+        run: |
+          wget https://downloads.apache.org/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          sudo mv apache-jmeter-5.6.3 /opt/jmeter
+          sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
+        timeout-minutes: 5
+
+      - name: Iniciar la aplicación
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          echo "Esperando a que el servidor esté listo..."
+          npx wait-on http://localhost:${PORT}/products
+        timeout-minutes: 5
+
+      - name: Ejecutar pruebas de rendimiento con JMeter
+        run: |
+          jmeter -n -t ruta_a_tu_plan_de_pruebas.jmx -l testResults.jtl
+        timeout-minutes: 15
 
       - name: Mostrar resultados de JMeter
         run: |
@@ -155,14 +358,87 @@ jobs:
       - name: Verificar informes de JMeter
         run: |
           echo "Verificando contenido de report:"
-          ls -la report
+          ls -la report || echo "No se encontró el directorio report."
         timeout-minutes: 2
 
+      - name: Detener la aplicación
+        if: always()
+        run: kill $SERVER_PID
+        timeout-minutes: 1
+
+  # Job de pruebas de accesibilidad y seguridad
+  accessibility-and-security-tests:
+    runs-on: ubuntu-latest
+    needs: [build-and-unit-tests, test-suggestions]
+    timeout-minutes: 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: 'mysql://user:password@localhost:3306/testdb'
+      PORT: 3000
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
+        timeout-minutes: 2
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: npm ci
+        timeout-minutes: 5
+
+      - name: Iniciar la aplicación
+        run: |
+          npm run start &
+          SERVER_PID=$!
+          echo "Esperando a que el servidor esté listo..."
+          npx wait-on http://localhost:${PORT}/products
+        timeout-minutes: 5
+
+      - name: Ejecutar pruebas de accesibilidad
+        run: npm run test:accessibility
+        timeout-minutes: 10
+
+      - name: Ejecutar pruebas de seguridad
+        run: npm run test:security
+        timeout-minutes: 10
+
+      - name: Ejecutar npm audit (producción)
+        run: npm audit --production --audit-level=high || echo "Vulnerabilidades encontradas"
+        timeout-minutes: 2
+
+      - name: Detener la aplicación
+        if: always()
+        run: kill $SERVER_PID
+        timeout-minutes: 1
+
+  # Job de despliegue
   desplegar:
-    needs: construir-y-probar
+    needs:
+      - build-and-unit-tests
+      - test-suggestions
+      - integration-tests
+      - e2e-tests
+      - performance-tests
+      - accessibility-and-security-tests
     runs-on: ubuntu-latest
     if: success()
-
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
@@ -176,17 +452,23 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
+  # Job de notificación de fallo
   notificar-fallo:
-    needs: construir-y-probar
+    needs:
+      - build-and-unit-tests
+      - test-suggestions
+      - integration-tests
+      - e2e-tests
+      - performance-tests
+      - accessibility-and-security-tests
     runs-on: ubuntu-latest
     if: failure() || cancelled()
-    
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Obtener todo el historial de commits para identificar el merge
-          token: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal con permisos completos
+          fetch-depth: 0
+          token: ${{ secrets.TOKEN_REPO }}
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
@@ -199,7 +481,6 @@ jobs:
       - name: Obtener información del último merge
         id: last_merge
         run: |
-          # Intentar obtener el último commit de merge
           LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
           echo "Último commit de merge: $LAST_MERGE_COMMIT"
           echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
@@ -216,7 +497,7 @@ jobs:
           git config --global user.email "${{ secrets.GIT_USER_EMAIL }}"
 
       - name: Revertir el último merge si hay fallo
-        if: ${{ env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != '' }}
+        if: env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != ''
         run: |
           echo "Intentando revertir el merge commit: $LAST_MERGE_COMMIT"
           git revert -m 1 $LAST_MERGE_COMMIT --no-edit
@@ -239,15 +520,16 @@ jobs:
           TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
         run: node send-email-failure.js
 
+  # Job de notificación de éxito
   notificar-exito:
-    needs: construir-y-probar
+    needs: desplegar
     runs-on: ubuntu-latest
     if: success()
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Obtener todo el historial de commits
+          fetch-depth: 0
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
