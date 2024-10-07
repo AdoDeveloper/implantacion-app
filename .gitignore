@@ -10,5 +10,3 @@ testResults.jtl
 /cypress/reports
 /testResults.jtl
 error_screenshot.png
-# stryker temp files
-.stryker-tmp
