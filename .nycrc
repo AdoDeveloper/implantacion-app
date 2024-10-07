@@ -1,0 +1,6 @@
+{
+  "extends": "@istanbuljs/nyc-config-babel",
+  "all": true,
+  "reporter": ["text", "lcov"],
+  "exclude": ["node_modules", "tests/**/*.test.js"]
+}
