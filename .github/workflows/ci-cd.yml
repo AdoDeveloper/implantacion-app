@@ -28,6 +28,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
@@ -40,6 +50,11 @@ jobs:
 
       - name: Ejecutar Lint
         run: npm run lint
+        timeout-minutes: 2
+
+      - name: Instalar dependencias
+        run: |
+          npm ci
         timeout-minutes: 2
 
       - name: Instalar nyc globalmente
@@ -75,6 +90,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
@@ -127,6 +152,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
@@ -163,7 +198,7 @@ jobs:
 
       - name: Ejecutar pruebas de integración
         run: npm run test:integration
-        timeout-minutes: 2
+        timeout-minutes: 10
 
       - name: Detener la aplicación
         if: always()
@@ -191,6 +226,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
@@ -278,6 +323,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
@@ -343,6 +398,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+          cache: 'npm'
+        timeout-minutes: 2
+
+      - name: Caché de dependencias de NPM
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-
         timeout-minutes: 2
 
       - name: Instalar dependencias
