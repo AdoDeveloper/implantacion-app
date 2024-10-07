@@ -163,7 +163,7 @@ jobs:
 
       - name: Ejecutar pruebas de integración
         run: npm run test:integration
-        timeout-minutes: 10
+        timeout-minutes: 2
 
       - name: Detener la aplicación
         if: always()
