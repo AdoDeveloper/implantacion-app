@@ -6,7 +6,7 @@ const productRoutes = require('./src/routes/productRoutes')
 
 const app = express()
 
-// Configurar EJS como motor de plantillas
+// Configurar EJS como motor de plantillas para el proyecto
 app.set('view engine', 'ejs')
 app.set('views', path.join(__dirname, 'src/views'))
 
