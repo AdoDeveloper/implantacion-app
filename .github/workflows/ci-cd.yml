@@ -11,11 +11,9 @@ on:
       - main
 
 jobs:
-  # Job para construir y ejecutar todas las pruebas
   construir-y-probar:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    description: "Compila el código, configura las dependencias necesarias y ejecuta pruebas unitarias, de integración, de rendimiento, E2E con Selenium y Cypress."
 
     services:
       mysql:
@@ -42,15 +40,18 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          token: ${{ secrets.TOKEN_REPO }}
+          token: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal con permisos completos
+        timeout-minutes: 2
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
+        timeout-minutes: 2
 
       - name: Instalar dependencias
         run: npm ci
+        timeout-minutes: 2
 
       - name: Esperar a que MySQL esté listo
         run: |
@@ -62,12 +63,15 @@ jobs:
             echo "Esperando a MySQL..."
             sleep 1
           done
+        timeout-minutes: 2
 
       - name: Ejecutar migraciones de la base de datos
         run: npx prisma migrate deploy
+        timeout-minutes: 2
 
       - name: Ejecutar Lint
         run: npm run lint
+        timeout-minutes: 2
 
       - name: Instalar JMeter
         run: |
@@ -75,6 +79,7 @@ jobs:
           tar -xzf apache-jmeter-5.6.3.tgz
           sudo mv apache-jmeter-5.6.3 /opt/jmeter
           sudo ln -s /opt/jmeter/bin/jmeter /usr/local/bin/jmeter
+        timeout-minutes: 2
 
       - name: Instalar Chrome
         run: |
@@ -82,18 +87,31 @@ jobs:
           sudo apt-get install -y wget unzip
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo apt install -y ./google-chrome-stable_current_amd64.deb
+        timeout-minutes: 2
 
       - name: Configurar ChromeDriver
         run: |
           CHROME_DRIVER_VERSION=129.0.6668.70
           CHROME_DRIVER_URL="https://storage.googleapis.com/chrome-for-testing-public/${CHROME_DRIVER_VERSION}/linux64/chromedriver-linux64.zip"
+
+          echo "Descargando ChromeDriver versión ${CHROME_DRIVER_VERSION} desde ${CHROME_DRIVER_URL}..."
           wget -q ${CHROME_DRIVER_URL} -O chromedriver-linux64.zip
+
+          echo "Descomprimiendo ChromeDriver..."
           unzip -o chromedriver-linux64.zip
+
+          echo "Moviendo ChromeDriver a /usr/local/bin..."
           sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
+
+          echo "Asignando permisos de ejecución a ChromeDriver..."
           sudo chmod +x /usr/local/bin/chromedriver
+
+          echo "Verificando la versión instalada de ChromeDriver..."
           chromedriver --version
+
           rm chromedriver-linux64.zip
           rm -rf chromedriver-linux64/
+        timeout-minutes: 2
 
       - name: Ejecutar todas las pruebas (unitarias, integración y rendimiento)
         run: |
@@ -101,40 +119,55 @@ jobs:
           export PORT=3000
           npm run start &
           SERVER_PID=$!
-          sleep 10
+          echo "Esperando a que el servidor esté listo..."
+          sleep 10  # Espera 10 segundos
           npx wait-on http://localhost:${PORT}/products
           npm run test:all
+          echo "Deteniendo el servidor..."
           kill $SERVER_PID
+        timeout-minutes: 1.5
 
       - name: Ejecutar pruebas E2E con Selenium
-        run: npm run selenium-test
+        run: |
+          set -e
+          npm run selenium-test
+        timeout-minutes: 2
 
       - name: Ejecutar pruebas E2E con Cypress
-        run: npm run test:e2e
+        run: |
+          set -e
+          npm run test:e2e
+        timeout-minutes: 2
 
       - name: Mostrar resultados de Cypress
         run: |
+          echo "Mostrando resultados de pruebas de Cypress:"
           cat cypress/reports/mochawesome.json || echo "No se encontraron archivos JSON de informe de Cypress."
           cat cypress/reports/mochawesome.html || echo "No se encontró el informe HTML de Cypress."
+        timeout-minutes: 2
 
       - name: Mostrar resultados de JMeter
-        run: cat testResults.jtl || echo "No se generó testResults.jtl."
+        run: |
+          echo "Mostrando resultados de pruebas de JMeter:"
+          cat testResults.jtl || echo "No se generó testResults.jtl."
+        timeout-minutes: 2
 
       - name: Verificar informes de JMeter
-        run: ls -la report
+        run: |
+          echo "Verificando contenido de report:"
+          ls -la report
+        timeout-minutes: 2
 
-  # Job para desplegar la aplicación en Render
   desplegar:
     needs: construir-y-probar
     runs-on: ubuntu-latest
-    description: "Despliega la aplicación en Render si todas las pruebas pasan correctamente."
     if: success()
 
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Obtener todo el historial de commits
 
       - name: Desplegar en Render
         env:
@@ -143,19 +176,17 @@ jobs:
           curl -X POST "https://api.render.com/v1/services/srv-crsdonu8ii6s73ecpbpg/deploys" \
           -H "Authorization: Bearer $RENDER_API_KEY"
 
-  # Job para notificar fallos y revertir cambios
   notificar-fallo:
     needs: construir-y-probar
     runs-on: ubuntu-latest
-    description: "Notifica sobre los fallos del pipeline y revierte el último merge commit si falla alguna etapa."
     if: failure() || cancelled()
     
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
-          token: ${{ secrets.TOKEN_REPO }}
+          fetch-depth: 0  # Obtener todo el historial de commits para identificar el merge
+          token: ${{ secrets.TOKEN_REPO }}  # Usar tu token personal con permisos completos
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
@@ -168,6 +199,7 @@ jobs:
       - name: Obtener información del último merge
         id: last_merge
         run: |
+          # Intentar obtener el último commit de merge
           LAST_MERGE_COMMIT=$(git log --merges -1 --pretty=format:"%H")
           echo "Último commit de merge: $LAST_MERGE_COMMIT"
           echo "LAST_MERGE_COMMIT=$LAST_MERGE_COMMIT" >> $GITHUB_ENV
@@ -186,8 +218,10 @@ jobs:
       - name: Revertir el último merge si hay fallo
         if: ${{ env.LAST_MERGE_COMMIT && env.LAST_MERGE_COMMIT != '' }}
         run: |
+          echo "Intentando revertir el merge commit: $LAST_MERGE_COMMIT"
           git revert -m 1 $LAST_MERGE_COMMIT --no-edit
           git push origin main || (echo "Error al hacer push del revert" && exit 1)
+          echo "Revertido el merge commit: $LAST_MERGE_COMMIT"
 
       - name: Confirmar Revertido Exitoso
         run: |
@@ -196,6 +230,7 @@ jobs:
           else
             echo "No se pudo revertir el commit: $LAST_MERGE_COMMIT"
             exit 1
+          fi
 
       - name: Enviar notificación por correo electrónico de fallo
         env:
@@ -204,18 +239,15 @@ jobs:
           TOKEN_REPO: ${{ secrets.TOKEN_REPO }}
         run: node send-email-failure.js
 
-  # Job para notificar éxito del pipeline
   notificar-exito:
     needs: construir-y-probar
     runs-on: ubuntu-latest
-    description: "Notifica sobre el éxito del pipeline."
     if: success()
-
     steps:
       - name: Obtener código
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0
+          fetch-depth: 0  # Obtener todo el historial de commits
 
       - name: Configurar Node.js
         uses: actions/setup-node@v3
@@ -233,6 +265,7 @@ jobs:
             echo "IS_REVERT=true" >> $GITHUB_OUTPUT
           else
             echo "IS_REVERT=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Enviar notificación de éxito normal
         if: steps.check_revert.outputs.IS_REVERT == 'false'
