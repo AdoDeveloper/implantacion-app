@@ -7,7 +7,7 @@ const productController = require('../controllers/productController')
 router.get('/new', productController.renderCreateProductForm)
 
 // Ruta para crear un nuevo producto
-router.get('/', productController.createProduct)
+router.post('/', productController.createProduct)
 
 // Ruta para listar todos los productos
 router.get('/', productController.getAllProducts)
